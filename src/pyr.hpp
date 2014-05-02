@@ -1,0 +1,252 @@
+
+#ifndef POLYQUAD_PYR_HPP_
+#define POLYQUAD_PYR_HPP_
+
+#include "base.hpp"
+#include "jacobi_poly.hpp"
+#include "util.hpp"
+
+#include <Eigen/Dense>
+
+#include <cassert>
+
+namespace polyquad {
+
+template<typename T>
+class PyrDomain : public BaseDomain<PyrDomain<T>, T, 3, 4>
+{
+public:
+    typedef BaseDomain<PyrDomain<T>, T, 3, 4> Base;
+    typedef typename Base::MatrixXT MatrixXT;
+    typedef typename Base::VectorXT VectorXT;
+    typedef typename Base::MatrixPtsT MatrixPtsT;
+    typedef typename Base::VectorOrb VectorOrb;
+
+    typedef Eigen::Matrix<T, 3, 1> Vector3T;
+
+public:
+    PyrDomain() : Base(2*sqrt(T(6))/3)
+    {}
+
+    bool validate_orbit(const VectorOrb&) const
+    { return true; }
+
+private:
+    friend class BaseDomain<PyrDomain<T>, T, 3, 4>;
+
+    int npts_for_orbit(int i) const;
+
+    int narg_for_orbit(int i) const;
+
+    int nbfn_for_qdeg(int qdeg) const;
+
+    void expand_orbit(int i, int aoff, int poff,
+                      const VectorXT& args,
+                      MatrixPtsT& pts) const;
+
+    void seed_orbit(int i, int aoff, VectorXT& args);
+
+    template<typename D1, typename D2>
+    void eval_orthob_block(const D1 pqr, D2 out) const;
+
+    void clamp_arg(int i, int aoff, VectorXT& args) const;
+};
+
+template<typename T>
+inline int
+PyrDomain<T>::npts_for_orbit(int i) const
+{
+    switch (i)
+    {
+        case 0:
+            return 1;
+        case 1:
+        case 2:
+            return 4;
+        case 3:
+            return 8;
+        default:
+            assert(0 && "Bad orbit"), abort();
+    }
+}
+
+template<typename T>
+inline int
+PyrDomain<T>::narg_for_orbit(int i) const
+{
+    switch (i)
+    {
+        case 0:
+            return 1;
+        case 1:
+        case 2:
+            return 2;
+        case 3:
+            return 3;
+        default:
+            assert(0 && "Bad orbit"), abort();
+    }
+}
+
+template<typename T>
+inline int
+PyrDomain<T>::nbfn_for_qdeg(int qdeg) const
+{
+    return (qdeg + 1)*(qdeg + 2)*(qdeg + 3)/6;
+}
+
+template<typename T>
+EIGEN_ALWAYS_INLINE void
+PyrDomain<T>::expand_orbit(int i, int aoff, int poff,
+                           const VectorXT& args, MatrixPtsT& pts) const
+{
+    switch (i)
+    {
+        case 0:
+        {
+            pts.row(poff) = Vector3T(0, 0, args(aoff));
+            break;
+        }
+        case 1:
+        {
+            const T& a = args(aoff + 0);
+            const T& b = args(aoff + 1);
+            pts.row(poff + 0) = Vector3T(a, 0, b);
+            pts.row(poff + 1) = Vector3T(0, a, b);
+            pts.row(poff + 2) = Vector3T(-a, 0, b);
+            pts.row(poff + 3) = Vector3T(0, -a, b);
+            break;
+        }
+        case 2:
+        {
+            const T& a = args(aoff + 0);
+            const T& b = args(aoff + 1);
+            pts.row(poff + 0) = Vector3T(a, a, b);
+            pts.row(poff + 1) = Vector3T(a, -a, b);
+            pts.row(poff + 2) = Vector3T(-a, a, b);
+            pts.row(poff + 3) = Vector3T(-a, -a, b);
+            break;
+        }
+        case 3:
+        {
+            const T& a = args(aoff + 0);
+            const T& b = args(aoff + 1);
+            const T& c = args(aoff + 2);
+            pts.row(poff + 0) = Vector3T(a, b, c);
+            pts.row(poff + 1) = Vector3T(b, a, c);
+            pts.row(poff + 2) = Vector3T(a, -b, c);
+            pts.row(poff + 3) = Vector3T(-b, a, c);
+            pts.row(poff + 4) = Vector3T(-a, b, c);
+            pts.row(poff + 5) = Vector3T(b, -a, c);
+            pts.row(poff + 6) = Vector3T(-a, -b, c);
+            pts.row(poff + 7) = Vector3T(-b, -a, c);
+            break;
+        }
+        default:
+            assert(0 && "Bad orbit"), abort();
+    }
+}
+
+template<typename T>
+inline void
+PyrDomain<T>::seed_orbit(int i, int aoff, VectorXT& args)
+{
+    switch (i)
+    {
+        case 0:
+            args(aoff + 0) = this->rand(-1.0, 1.0);
+            break;
+        case 1:
+        case 2:
+        {
+            double b = this->rand(-1.0, 1.0);
+            args(aoff + 0) = this->rand(0.0, (1.0 - b)/2);
+            args(aoff + 1) = b;
+            break;
+        }
+        case 3:
+        {
+            double c = this->rand(-1.0, 1.0);
+            args(aoff + 0) = this->rand(0.0, (1.0 - c)/2);
+            args(aoff + 1) = this->rand(0.0, (1.0 - c)/2);
+            args(aoff + 2) = c;
+            break;
+        }
+        default:
+            assert(0 && "Bad orbit"), abort();
+    }
+}
+
+template<typename T>
+template<typename D1, typename D2>
+inline void
+PyrDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
+{
+    typedef Eigen::Array<T, D1::RowsAtCompileTime, 1> ArrayT;
+
+    const T half = 0.5;
+
+    const auto& p = pqr.col(0);
+    const auto& q = pqr.col(1);
+    const auto& r = pqr.col(2);
+
+    const auto& a = (r != 1).select(2*p/(1 - r), 0);
+    const auto& b = (r != 1).select(2*q/(1 - r), 0);
+    const auto& c = r;
+
+    ArrayT pow1mci = ArrayT::Constant(p.size(), 1);
+
+    for (int i = 0, off = 0; i <= this->qdeg() ; ++i)
+    {
+        ArrayT pow1mcj = ArrayT::Constant(p.size(), 1);
+
+        for (int j = 0; j <= this->qdeg() - i; ++j)
+        {
+            T cij = exp2(-j - i - half);
+
+            for (int k = 0; k <= this->qdeg() - i - j; ++k, ++off)
+            {
+                T cijk = cij*sqrt((2*(k + j + i) + 3)*(i + half)*(j + half));
+
+                out.row(off) = cijk*pow1mci*pow1mcj
+                             * jacobi_poly(i, 0, 0, a)
+                             * jacobi_poly(j, 0, 0, b)
+                             * jacobi_poly(k, 2*(i + j + 1), 0, c);
+            }
+
+            pow1mcj *= 1 - c;
+        }
+
+        pow1mci *= 1 - c;
+    }
+}
+
+template<typename T>
+inline void
+PyrDomain<T>::clamp_arg(int i, int aoff, VectorXT& args) const
+{
+    switch (i)
+    {
+        case 0:
+            args(aoff + 0) = clamp(-1, args(aoff), 1);
+            break;
+        case 1:
+        case 2:
+            args(aoff + 1) = clamp(-1, args(aoff + 1), 1);
+            args(aoff + 0) = clamp(0, args(aoff + 0), (1 - args(aoff + 1))/2);
+            break;
+        case 3:
+        {
+            args(aoff + 2) = clamp(-1, args(aoff + 2), 1);
+            args(aoff + 1) = clamp(0, args(aoff + 1), (1 - args(aoff + 2))/2);
+            args(aoff + 0) = clamp(0, args(aoff + 0), (1 - args(aoff + 2))/2);
+            break;
+        }
+        default:
+            assert(0 && "Bad orbit"), abort();
+    }
+}
+
+}
+
+#endif /* POLYQUAD_PYR_HPP_ */
