@@ -449,7 +449,7 @@ int main(int argc, char *argv[])
         if (vm.count("help") || !vm.count("action"))
         {
             std::cout << "Usage: polyquad [OPTION...] <action>\n\n"
-                         "<action> is one of: find, eval\n";
+                         "<action> is one of: find, eval, expand\n";
             std::cout << generic_opt << "\n";
 
             for (const auto& aopt : action_opts)
