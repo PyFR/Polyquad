@@ -370,7 +370,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::symm_decomps_recurse(
 
     if (range*mcoeff == sum)
     {
-        partsoln[index] = range--;
+        partsoln(index) = range--;
 
         if (static_cast<const Derived&>(*this).validate_orbit(partsoln))
             solns.push_back(partsoln);
@@ -384,17 +384,15 @@ BaseDomain<Derived, T, Ndim, Norbits>::symm_decomps_recurse(
         int rem = sum - range*mcoeff;
 
         VectorOrb coeffCopy = coeffs;
-        coeffCopy[index] = 0;
+        coeffCopy(index) = 0;
 
-        partsoln[index] = range;
+        partsoln(index) = range--;
 
         for (int i = 0; i < coeffCopy.rows(); ++i)
-            if (coeffCopy[i] != 0)
-                partsoln[i] = 0;
+            if (coeffCopy(i) != 0)
+                partsoln(i) = 0;
 
         symm_decomps_recurse(coeffCopy, rem, partsoln, solns);
-
-        range--;
     }
 }
 
