@@ -83,7 +83,7 @@ IF(MPI_CXX_FOUND)
         INCLUDE_DIRECTORIES(${MPI_INCLUDE_PATH})
         TARGET_LINK_LIBRARIES(polyquad
                               ${Boost_MPI_LIBRARY}
-                              ${MPI_C_LIBRARIES})
+                              ${MPI_CXX_LIBRARIES})
         SET(POLYQUAD_HAVE_MPI 1)
     ENDIF()
 ENDIF()
