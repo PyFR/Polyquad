@@ -25,7 +25,7 @@ public:
     typedef Eigen::Matrix<T, 3, 1> Vector3T;
 
 public:
-    TetDomain() : Base(T(4)/3)
+    TetDomain() : Base(2/sqrt(T(3)))
     {}
 
     bool validate_orbit(const VectorOrb& orb) const
@@ -240,7 +240,7 @@ TetDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
     const auto& b = (r != 1).select(2*(1 + q)/(1 - r) - 1, 0);
     const auto& c = r;
 
-    const T two = 2;
+    const T one = 1;
 
     ArrayT pow1mbi = ArrayT::Constant(p.size(), 1);
     ArrayT pow1mci = ArrayT::Constant(p.size(), 1);
@@ -253,7 +253,7 @@ TetDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
 
         for (int j = i; j <= this->qdeg() - i; ++j)
         {
-            T cij = ci*sqrt(T(i + j + 1))*ldexp(two, -j);
+            T cij = ci*sqrt(T(i + j + 1))*ldexp(one, -j);
 
             for (int k = j; k <= this->qdeg() - i - j; ++k, ++off)
             {
