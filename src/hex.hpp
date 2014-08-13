@@ -104,9 +104,9 @@ HexDomain<T>::nbfn_for_qdeg(int qdeg) const
 {
     int n = 0;
 
-    for (int i = 0; i <= qdeg; ++i)
-        for (int j = i; j <= qdeg - i; ++j)
-            for (int k = j; k <= qdeg - i - j; ++k, ++n);
+    for (int i = 0; i <= qdeg; i += 2)
+        for (int j = i; j <= qdeg - i; j += 2)
+            for (int k = j; k <= qdeg - i - j; k += 2, ++n);
 
     return n;
 }
@@ -323,11 +323,11 @@ HexDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
 
     const T half = 0.5;
 
-    for (int i = 0, off = 0; i <= this->qdeg(); ++i)
+    for (int i = 0, off = 0; i <= this->qdeg(); i += 2)
     {
-        for (int j = i; j <= this->qdeg() - i; ++j)
+        for (int j = i; j <= this->qdeg() - i; j += 2)
         {
-            for (int k = j; k <= this->qdeg() - i - j; ++k, ++off)
+            for (int k = j; k <= this->qdeg() - i - j; k += 2, ++off)
             {
                 T cijk = sqrt((i + half)*(j + half)*(k + half));
 

@@ -94,8 +94,8 @@ QuadDomain<T>::nbfn_for_qdeg(int qdeg) const
 {
     int n = 0;
 
-    for (int i = 0; i <= qdeg; ++i)
-        for (int j = i; j <= qdeg - i; ++j, ++n);
+    for (int i = 0; i <= qdeg; i += 2)
+        for (int j = i; j <= qdeg - i; j += 2, ++n);
 
     return n;
 }
@@ -182,9 +182,9 @@ QuadDomain<T>::eval_orthob_block(const D1 pq, D2 out) const
 
     const T half = 0.5;
 
-    for (int i = 0, off = 0; i <= this->qdeg(); ++i)
+    for (int i = 0, off = 0; i <= this->qdeg(); i += 2)
     {
-        for (int j = i; j <= this->qdeg() - i; ++j, ++off)
+        for (int j = i; j <= this->qdeg() - i; j += 2, ++off)
         {
             T cij = sqrt((i + half)*(j + half));
 
