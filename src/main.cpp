@@ -421,7 +421,7 @@ int main(int argc, char *argv[])
     // Rule expansion specific options
     action_opts.insert({"expand", std::string("Expand action options")});
     action_opts["expand"].add_options()
-        ("header,h", po::value<bool>()->default_value(false)->zero_tokens(),
+        ("header,x", po::value<bool>()->default_value(false)->zero_tokens(),
          "Output a header with each rule");
 
     // Collate

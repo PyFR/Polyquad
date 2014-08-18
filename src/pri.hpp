@@ -106,8 +106,8 @@ PriDomain<T>::nbfn_for_qdeg(int qdeg) const
     int n = 0;
 
     for (int i = 0; i <= qdeg; ++i)
-        for (int j = 0; j <= qdeg - i; ++j)
-            for (int k = j; k <= qdeg - i - j; ++k, ++n);
+        for (int j = i; j <= qdeg - i; ++j)
+            for (int k = 0; k <= qdeg - i - j; k += 2, ++n);
 
     return n;
 }
@@ -232,22 +232,26 @@ PriDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
     const auto& q = pqr.col(1);
     const auto& r = pqr.col(2);
 
-    const auto& a = (q != -1).select(2*(1 + p)/(1 - q) - 1, 0);
+    const auto& a = (q != 1).select(2*(1 + p)/(1 - q) - 1, 0);
     const auto& b = q;
     const auto& c = r;
+
+    const T half = 0.5;
 
     ArrayT pow1mqi = ArrayT::Constant(p.size(), 1);
     T pow2ip1 = 0.5;
 
     for (int i = 0, off = 0; i <= this->qdeg(); ++i)
     {
-        for (int j = 0; j <= this->qdeg() - i; ++j)
+        for (int j = i; j <= this->qdeg() - i; ++j)
         {
-            for (int k = j; k <= this->qdeg() - i - j; ++k, ++off)
-            {
-                T cijk = sqrt(T((2*i + 1)*(2*i + 2*j + 2)))*pow2ip1;
+            T cij = sqrt(T((2*i + 1)*(2*i + 2*j + 2)))*pow2ip1;
 
-                out.row(off) = cijk * pow1mqi
+            for (int k = 0; k <= this->qdeg() - i - j; k += 2, ++off)
+            {
+                T cijk = cij*sqrt(k + half);
+
+                out.row(off) = cijk*pow1mqi
                              * jacobi_poly(i, 0, 0, a)
                              * jacobi_poly(j, 2*i + 1, 0, b)
                              * jacobi_poly(k, 0, 0, c);
