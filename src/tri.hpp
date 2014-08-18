@@ -51,7 +51,6 @@ private:
 
     void clamp_arg(int i, int aoff, VectorXT& args) const;
 
-
 private:
     Vector2T bary_to_cart(const T& p1, const T& p2, const T& p3) const
     { return {-p1 + p2 - p3, -p1 - p2 + p3}; }
@@ -183,7 +182,7 @@ TriDomain<T>::eval_orthob_block(const D1 pq, D2 out) const
         {
             T cij = sqrt(T((2*i + 1)*(2*i + 2*j + 2)))*pow2ip1;
 
-            out.row(off) = cij * pow1mbi
+            out.row(off) = cij*pow1mbi
                          * jacobi_poly(i, 0, 0, a)
                          * jacobi_poly(j, 2*i + 1, 0, b);
         }
