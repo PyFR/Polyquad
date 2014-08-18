@@ -92,7 +92,13 @@ template<typename T>
 inline int
 PyrDomain<T>::nbfn_for_qdeg(int qdeg) const
 {
-    return (qdeg + 1)*(qdeg + 2)*(qdeg + 3)/6;
+    int n = 0;
+
+    for (int i = 0; i <= qdeg; i += 2)
+        for (int j = i; j <= qdeg - i; j += 2)
+            for (int k = 0; k <= qdeg - i - j; ++k, ++n);
+
+    return n;
 }
 
 template<typename T>
@@ -196,11 +202,11 @@ PyrDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
 
     ArrayT pow1mci = ArrayT::Constant(p.size(), 1);
 
-    for (int i = 0, off = 0; i <= this->qdeg() ; ++i)
+    for (int i = 0, off = 0; i <= this->qdeg(); i += 2)
     {
-        ArrayT pow1mcj = ArrayT::Constant(p.size(), 1);
+        ArrayT pow1mcj = pow1mci;
 
-        for (int j = 0; j <= this->qdeg() - i; ++j)
+        for (int j = i; j <= this->qdeg() - i; j += 2)
         {
             T cij = exp2(-j - i - half);
 
@@ -214,10 +220,10 @@ PyrDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
                              * jacobi_poly(k, 2*(i + j + 1), 0, c);
             }
 
-            pow1mcj *= 1 - c;
+            pow1mcj *= (1 - c)*(1 - c);
         }
 
-        pow1mci *= 1 - c;
+        pow1mci *= (1 - c)*(1 - c);
     }
 }
 
