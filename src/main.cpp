@@ -17,6 +17,7 @@
 
 #include <Eigen/Dense>
 #ifdef POLYQUAD_HAVE_MPREAL
+# include <mpreal.h>
 # include <Eigen/MPRealSupport>
 #endif
 
@@ -77,9 +78,9 @@ erase_duplicates(const Domain<T>& dom,
 
 template<typename D, typename R>
 void
-print_compact(std::ostream& out, const D& decomp, const R& args)
+print_compact(std::ostream& out, int outprec, const D& decomp, const R& args)
 {
-    const Eigen::IOFormat fmt(Eigen::FullPrecision, Eigen::DontAlignCols);
+    const Eigen::IOFormat fmt(outprec, Eigen::DontAlignCols);
 
     out << decomp.transpose().format(fmt) << "\n";
     out << args.format(fmt) << "\n";
@@ -112,9 +113,10 @@ process_find(const po::variables_map& vm)
     const int maxfev = vm["maxfev"].as<int>();
     const double runtime = vm["walltime"].as<int>();
 
-    // Floating point tolerance
+    // Floating point tolerance and output precision
     const T tol = vm.count("tol") ? static_cast<T>(vm["tol"].as<double>())
                                   : Eigen::NumTraits<T>::dummy_precision();
+    const int outprec = vm["output-prec"].as<int>();
 
     // Flags
     const bool poswts = vm["positive"].as<bool>();
@@ -182,7 +184,7 @@ process_find(const po::variables_map& vm)
             for (const auto& r : rules[i])
             {
                 std::cout << "# Rule degree: " << qdeg << "\n";
-                print_compact(std::cout, orbits[i], r);
+                print_compact(std::cout, outprec, orbits[i], r);
                 std::cout << std::endl;
             }
         }
@@ -204,9 +206,11 @@ process_eval(const po::variables_map& vm)
     const int qdeg = vm["qdeg"].as<int>();
     const int maxfev = vm["maxfev"].as<int>();
 
-    // Floating point tolerance
+    // Floating point tolerance and output precision
     const T tol = vm.count("tol") ? static_cast<T>(vm["tol"].as<double>())
                                   : Eigen::NumTraits<T>::dummy_precision();
+    const int outprec = vm["output-prec"].as<int>();
+
 
     // Flags
     const bool refine = vm["refine"].as<bool>();
@@ -259,7 +263,7 @@ process_eval(const po::variables_map& vm)
                 std::cout << "# Refined residual norm: " << rnorm << "\n";
             }
 
-            print_compact(std::cout, orb, args);
+            print_compact(std::cout, outprec, orb, args);
 
             if (verbose)
                 std::cerr << std::endl;
@@ -296,7 +300,7 @@ process_expand(const po::variables_map& vm)
                    std::ios_base::eofbit);
 
     // Output formatting
-    const Eigen::IOFormat fmt(Eigen::FullPrecision, 0, "  ");
+    const Eigen::IOFormat fmt(vm["output-prec"].as<int>(), 0, "  ");
 
     try
     {
@@ -362,6 +366,14 @@ int main(int argc, char *argv[])
         { {"tet",  "double"}, &process_dispatch<TetDomain,  double> },
         { {"pri",  "double"}, &process_dispatch<PriDomain,  double> },
         { {"pyr",  "double"}, &process_dispatch<PyrDomain,  double> },
+#ifdef POLYQUAD_HAVE_MPREAL
+        { {"tri",  "mpreal"}, &process_dispatch<TriDomain,  mpfr::mpreal> },
+        { {"quad", "mpreal"}, &process_dispatch<QuadDomain, mpfr::mpreal> },
+        { {"hex",  "mpreal"}, &process_dispatch<HexDomain,  mpfr::mpreal> },
+        { {"tet",  "mpreal"}, &process_dispatch<TetDomain,  mpfr::mpreal> },
+        { {"pri",  "mpreal"}, &process_dispatch<PriDomain,  mpfr::mpreal> },
+        { {"pyr",  "mpreal"}, &process_dispatch<PyrDomain,  mpfr::mpreal> },
+#endif
     };
 
     std::set<std::string> shapes, dtypes;
@@ -391,6 +403,9 @@ int main(int argc, char *argv[])
                          ->notifier(mpfr::mpreal::set_default_prec),
          "Base precision for MPFR reals")
 #endif
+        ("output-prec,P",
+         po::value<int>()->default_value(Eigen::FullPrecision, ""),
+         "Output precision")
         ("tol,t", po::value<double>(), "Tolerance");
 
     // Hidden (positional) options
