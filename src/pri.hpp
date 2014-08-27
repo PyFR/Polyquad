@@ -239,7 +239,7 @@ PriDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
     const T half = 0.5;
 
     ArrayT pow1mqi = ArrayT::Constant(p.size(), 1);
-    T pow2ip1 = 0.5;
+    T pow2ip1 = half;
 
     for (int i = 0, off = 0; i <= this->qdeg(); ++i)
     {
