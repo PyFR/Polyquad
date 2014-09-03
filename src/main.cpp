@@ -309,6 +309,9 @@ process_expand(const po::variables_map& vm)
     // Quadrature degree of the rule and the max number of fn evals
     const int qdeg = vm["qdeg"].as<int>();
 
+    // If to output a header or not
+    bool header = vm["header"].as<bool>();
+
     // Input stream
     boost::iostreams::filtering_istream ifs;
     ifs.push(comment_filter());
@@ -347,7 +350,9 @@ process_expand(const po::variables_map& vm)
             MatrixXT out(dom.npts(), dom.ndim() + 1);
             out << pts, wts;
 
-            std::cout << "# Rule degree: " << qdeg << "\n";
+            if (header)
+                std::cout << "# Rule degree: " << qdeg << "\n";
+
             std::cout << out.format(fmt) << "\n" << std::endl;
         }
     }
@@ -454,7 +459,7 @@ int main(int argc, char *argv[])
     // Rule expansion specific options
     action_opts.insert({"expand", std::string("Expand action options")});
     action_opts["expand"].add_options()
-        ("header,x", po::value<bool>()->default_value(false)->zero_tokens(),
+        ("header,x", po::value<bool>()->default_value(true)->zero_tokens(),
          "Output a header with each rule");
 
     // Collate
