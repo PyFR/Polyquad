@@ -1,6 +1,3 @@
-
-#ifndef POLYQUAD_BASE_HPP
-#define POLYQUAD_BASE_HPP
 /*
     This file is part of polyquad.
     Copyright (C) 2014  Freddie Witherden <freddie@witherden.org>
@@ -18,6 +15,9 @@
     You should have received a copy of the GNU General Public License
     along with polyquad.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+#ifndef POLYQUAD_BASE_HPP
+#define POLYQUAD_BASE_HPP
 
 #include <Eigen/Dense>
 #include <Eigen/LevenbergMarquardt>
