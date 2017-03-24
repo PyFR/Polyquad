@@ -218,9 +218,6 @@ BaseDomain<Derived, T, Ndim, Norbits>::eval_orthob(
 {
     const Derived& derived = static_cast<const Derived&>(*this);
 
-    auto ptsa = pts.array();
-    auto outa = out.array();
-
     int n = out.cols();
 
     if (std::is_fundamental<T>::value)
@@ -229,26 +226,26 @@ BaseDomain<Derived, T, Ndim, Norbits>::eval_orthob(
 
         // Process points in blocks of sixteen
         for (int i = 0; i < n16; i += 16)
-            derived.eval_orthob_block(ptsa.template middleRows<16>(i),
-                                      outa.template middleCols<16>(i));
+            derived.eval_orthob_block(pts.array().template middleRows<16>(i),
+                                      out.array().template middleCols<16>(i));
 
         // Cleanup
         if (n16 < n8)
-            derived.eval_orthob_block(ptsa.template middleRows<8>(n16),
-                                      outa.template middleCols<8>(n16));
+            derived.eval_orthob_block(pts.array().template middleRows<8>(n16),
+                                      out.array().template middleCols<8>(n16));
         if (n8 < n4)
-            derived.eval_orthob_block(ptsa.template middleRows<4>(n8),
-                                      outa.template middleCols<4>(n8));
+            derived.eval_orthob_block(pts.array().template middleRows<4>(n8),
+                                      out.array().template middleCols<4>(n8));
         if (n4 < n2)
-            derived.eval_orthob_block(ptsa.template middleRows<2>(n4),
-                                      outa.template middleCols<2>(n4));
+            derived.eval_orthob_block(pts.array().template middleRows<2>(n4),
+                                      out.array().template middleCols<2>(n4));
         if (n2 < n)
-            derived.eval_orthob_block(ptsa.template middleRows<1>(n2),
-                                      outa.template middleCols<1>(n2));
+            derived.eval_orthob_block(pts.array().template middleRows<1>(n2),
+                                      out.array().template middleCols<1>(n2));
     }
     else
     {
-        derived.eval_orthob_block(ptsa, outa);
+        derived.eval_orthob_block(pts.array(), out.array());
     }
 }
 
