@@ -24,6 +24,7 @@
 
 #ifdef POLYQUAD_HAVE_MPI
 # include <boost/serialization/array.hpp>
+# include <boost/serialization/vector.hpp>
 # ifdef POLYQUAD_HAVE_MPREAL
 #  include <mpreal.h>
 # endif
