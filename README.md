@@ -4,7 +4,7 @@ Polyquad
 About
 -----
 
-Polyquad is an open-source C++11 application for finding symmetric
+Polyquad is an open-source C++14 application for finding symmetric
 quadrature rules suitable for use with the finite element method.
 Both the target strength of the quadrature and the number of points
 are configurable. Polyquad is parallelised using MPI and can refine
@@ -30,11 +30,9 @@ In order to build polyquad it is necessary to have first installed:
  - [Eigen](http://eigen.tuxfamily.org/), preferably the current head
    revision;
  - [Boost](http://www.boost.org/), specifically
-  - chrono
   - mpi (optional)
   - program_options
   - serialization
-  - system
  - [MPFR](http://www.mpfr.org/) (optional)
  - [MPFR C++](http://www.holoborodko.com/pavel/mpfr/) (optional)
 
@@ -43,12 +41,11 @@ able to run on clusters.  Similarly, if the MPFR and the corresponding
 C++ wrapper are available then support for refining rules to arbitrary
 precision will be enabled.  As polyquad makes use of advanced template
 metaprogramming features it is important to build it using a compiler
-that supports the C++11 standard.  As of the time of writing the
+that supports the C++14 standard.  As of the time of writing the
 following compilers are known to have successfully built polyquad:
 
- - GCC 4.7, 4.8, and 4.9;
- - Clang 3.4;
- - ICC 14.
+ - GCC 9.2;
+ - Clang 8.
 
 Building polyquad can require in excess of four gigabytes of main
 memory and several minutes of CPU time.
@@ -74,7 +71,7 @@ Usage instructions can be obtained by running:
 
     $ ./polyquad --help
 
-a simple example we consider wsing polyquad to search for strength 5
+a simple example we consider using polyquad to search for strength 5
 rules inside of a tetrahedron using 15 points:
 
     $ ./polyquad find -s tet -q5 -n15 -V -p > rules.txt
