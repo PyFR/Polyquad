@@ -304,7 +304,7 @@ process_expand(const po::variables_map& vm)
     typedef typename Domain<T>::MatrixPtsT MatrixPtsT;
     typedef typename Domain<T>::VectorOrb VectorOrb;
 
-    // Pinciple domain
+    // Principal domain
     Domain<T> dom;
 
     // Quadrature degree of the rule and the max number of fn evals
@@ -377,7 +377,7 @@ void process_dispatch(const po::variables_map& vm)
         process_expand<Domain, T>(vm);
 }
 
-int main(int argc, char *argv[])
+int main(int argc, const char *argv[])
 {
     typedef std::pair<std::string, std::string> shape_key;
     typedef void (*process_fn)(const po::variables_map&);
