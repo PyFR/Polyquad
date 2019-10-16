@@ -65,34 +65,26 @@ compare_pts(const Eigen::MatrixBase<Derived>& a,
 }
 
 template<template<typename> class Domain, typename T>
-void
-erase_duplicates(const Domain<T>& dom,
-                 std::vector<typename Domain<T>::VectorXT>& m,
-                 const T& tol)
+bool
+seen_rule(const Domain<T>& dom,
+          const std::vector<typename Domain<T>::VectorXT>& rules,
+          const typename Domain<T>::VectorXT& newr,
+          const T& tol)
 {
-    typedef typename Domain<T>::MatrixPtsT MatrixPtsT;
+    typename Domain<T>::MatrixPtsT pts_a(dom.npts(), dom.ndim());
+    typename Domain<T>::MatrixPtsT pts_b(dom.npts(), dom.ndim());
 
-    for (auto it = m.begin(); it != m.end();)
+    dom.expand(newr, pts_a);
+
+    for (const auto& ri : rules)
     {
-        bool seen = false;
+        dom.expand(ri, pts_b);
 
-        MatrixPtsT pts_a(dom.npts(), dom.ndim());
-        MatrixPtsT pts_b(dom.npts(), dom.ndim());
-
-        dom.expand(*it, pts_a);
-
-        for (auto iit = m.begin(); iit != it && !seen; ++iit)
-        {
-            dom.expand(*iit, pts_b);
-
-            seen = compare_pts(pts_a, pts_b, tol);
-        }
-
-        if (seen)
-            it = m.erase(it);
-        else
-            ++it;
+        if (compare_pts(pts_a, pts_b, tol))
+            return true;
     }
+
+    return false;
 }
 
 template<typename D, typename R>
@@ -126,20 +118,23 @@ process_find(const po::variables_map& vm)
     // Pinciple domain
     Domain<T> dom;
 
+    // Flags
+    const bool poswts = vm["positive"].as<bool>();
+    const bool verbose = vm["verbose"].as<bool>();
+    const bool twophase = vm["two-phase"].as<bool>();
+
     // Desired quadrature degree and point count
     const int qdeg = vm["qdeg"].as<int>();
     const int npts = vm["npts"].as<int>();
     const int maxfev = vm["maxfev"].as<int>();
-    const double runtime = vm["walltime"].as<int>();
+
+    const int nprelim = twophase ? vm["nprelim"].as<int>() : 0;
+    double runtime = vm["walltime"].as<int>();
 
     // Floating point tolerance and output precision
     const T tol = vm.count("tol") ? static_cast<T>(vm["tol"].as<double>())
                                   : Eigen::NumTraits<T>::dummy_precision();
     const int outprec = vm["output-prec"].as<int>();
-
-    // Flags
-    const bool poswts = vm["positive"].as<bool>();
-    const bool verbose = vm["verbose"].as<bool>();
 
     T norm;
     VectorXT args;
@@ -147,17 +142,72 @@ process_find(const po::variables_map& vm)
     // Decompose npts into symmetric orbital configurations
     auto orbits = dom.symm_decomps(npts);
 
+    // Sequence in which the orbits should be considered
+    std::vector<int> orbitseq(orbits.size());
+    std::iota(std::begin(orbitseq), std::end(orbitseq), 0);
+
+    if (twophase)
+    {
+        // Decide how many orbits to consider
+        const int tryorbs = std::min<int>(std::max<int>(5, orbits.size() / 10),
+                                          orbits.size());
+
+        if (rank == 0 && verbose)
+            std::cerr << "Phase I: Decomposition selection" << std::endl;
+
+        Timer t;
+        std::vector<double> norms(orbits.size(), 1000);
+
+        for (int i = 0; i < orbits.size(); ++i)
+        {
+            dom.configure(qdeg, orbits[i]);
+
+            for (int j = 0; j < nprelim; ++j)
+            {
+                // Seed the orbit
+                dom.seed();
+
+                // Attempt to minimise
+                std::tie(norm, args) = dom.minimise(maxfev);
+
+                // Save the norm
+                norms[i] = std::min(norm, norms[i]);
+            };
+        }
+
+#ifdef POLYQUAD_HAVE_MPI
+        mpi::all_reduce(world, mpi::inplace(&norms.front()),
+                        norms.size(), mpi::minimum<double>());
+#endif
+
+        // Determine the order in which we should examine the orbits
+        std::sort(std::begin(orbitseq), std::end(orbitseq),
+                  [&norms](int i, int j) { return norms[i] < norms[j]; });
+
+        orbitseq.resize(tryorbs);
+
+        if (rank == 0 && verbose)
+            std::cerr << "Phase II: Proceeding with top " << tryorbs
+                      << " decompositions" << std::endl;
+
+        // Account for the time spent in decomposition selection
+        runtime -= t.elapsed();
+    }
+
     // Discovered rules for each configuration
     std::vector<std::vector<VectorXT>> rules(orbits.size());
 
-    for (int i = 0; i < orbits.size(); ++i)
+    for (int j = 0; j < orbitseq.size(); ++j)
     {
-        if (verbose && rank == 0)
-            std::cerr << "Decomposition: " << (i + 1) << "/"
-                      << orbits.size() << ": " << orbits[i].transpose()
-                      << std::endl;
+        const int i = orbitseq[j];
 
+        // Configure the domain for this orbit
         dom.configure(qdeg, orbits[i]);
+
+        if (verbose && rank == 0)
+            std::cerr << "Decomposition " << (i + 1) << "/"
+                      << orbits.size() << " (" << dom.ndof() << " DOF): "
+                      << orbits[i].transpose() << std::endl;
 
         Timer t;
         do
@@ -169,25 +219,29 @@ process_find(const po::variables_map& vm)
             std::tie(norm, args) = dom.minimise(maxfev);
 
             // See if the minimisation was successful
-            if (norm < tol && rules[i].size() < 1000
-             && (!poswts || (dom.wts(args).minCoeff() > 0)))
+            if (norm < tol
+             && (!poswts || (dom.wts(args).minCoeff() > 0))
+             && !seen_rule(dom, rules[i], args, tol))
+            {
                 rules[i].push_back(args);
-        } while (orbits.size()*t.elapsed() < runtime);
 
-        erase_duplicates(dom, rules[i], tol);
+                if (verbose)
+                    std::cerr << '.' << std::flush;
+            }
+        } while (orbitseq.size()*t.elapsed() < runtime
+              && rules[i].size() < 1000);
 
 #ifdef POLYQUAD_HAVE_MPI
         if (rank == 0)
         {
-            std::vector<std::vector<VectorXT>> grules;
-            mpi::gather(world, rules[i], grules, 0);
+            std::vector<std::vector<VectorXT>> gr;
+            mpi::gather(world, rules[i], gr, 0);
 
-            rules[i].clear();
-            for (const auto& rv : grules)
-                std::copy(std::begin(rv), std::end(rv),
-                          std::back_inserter(rules[i]));
-
-            erase_duplicates(dom, rules[i], tol);
+            // Merge the rules from other ranks into our vector
+            for (auto it = std::cbegin(gr) + 1; it != std::cend(gr); ++it)
+                for (const auto& r : *it)
+                    if (!seen_rule(dom, rules[i], r, tol))
+                        rules[i].push_back(r);
         }
         else
         {
@@ -199,7 +253,13 @@ process_find(const po::variables_map& vm)
         if (rank == 0)
         {
             if (verbose)
-                std::cerr << "Rule count: " << rules[i].size() << std::endl;
+            {
+                size_t nr = rules[i].size();
+
+                if (nr)
+                    std::cerr << '\n';
+                std::cerr << "Rule count: " << nr << std::endl;
+            }
 
             for (const auto& r : rules[i])
             {
@@ -448,6 +508,10 @@ int main(int argc, const char *argv[])
         ("npts,n", po::value<int>()->required(), "Desired number of points")
         ("walltime,w", po::value<int>()->default_value(300),
          "Approximate run time in seconds")
+        ("nprelim,f", po::value<int>()->default_value(8),
+         "For two phase runs how many preliminary runs to perform")
+        ("two-phase,b", po::value<bool>()->default_value(false)->zero_tokens(),
+         "Employ a two phase approach to rule finding")
         ("positive,p", po::value<bool>()->default_value(false)->zero_tokens(),
          "Enforce positivity of weights");
 
