@@ -46,6 +46,7 @@
 #include <vector>
 
 namespace po = boost::program_options;
+namespace mpi = boost::mpi;
 using namespace polyquad;
 
 template<typename Derived>
@@ -114,8 +115,8 @@ process_find(const po::variables_map& vm)
     typedef typename Domain<T>::VectorOrb VectorOrb;
 
 #ifdef POLYQUAD_HAVE_MPI
-    boost::mpi::environment env;
-    boost::mpi::communicator world;
+    mpi::environment env;
+    mpi::communicator world;
 
     const int rank = world.rank();
 #else
@@ -179,17 +180,18 @@ process_find(const po::variables_map& vm)
         if (rank == 0)
         {
             std::vector<std::vector<VectorXT>> grules;
-            boost::mpi::gather(world, rules[i], grules, 0);
+            mpi::gather(world, rules[i], grules, 0);
 
             rules[i].clear();
             for (const auto& rv : grules)
-                std::copy(rv.begin(), rv.end(), std::back_inserter(rules[i]));
+                std::copy(std::begin(rv), std::end(rv),
+                          std::back_inserter(rules[i]));
 
             erase_duplicates(dom, rules[i], tol);
         }
         else
         {
-            boost::mpi::gather(world, rules[i], 0);
+            mpi::gather(world, rules[i], 0);
             rules[i].clear();
         }
 #endif
