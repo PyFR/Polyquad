@@ -43,10 +43,8 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR})
 # External dependencies
 ##################################################
 SET(POLYQUAD_BOOST_LIBS
-    chrono
     program_options
-    serialization
-    system)
+    serialization)
 
 # Find Boost
 FIND_PACKAGE(Boost REQUIRED ${POLYQUAD_BOOST_LIBS})

@@ -19,7 +19,6 @@
 #ifndef POLYQUAD_UTIL_HPP
 #define POLYQUAD_UTIL_HPP
 
-#include <boost/chrono.hpp>
 #include <boost/iostreams/filter/line.hpp>
 
 #ifdef POLYQUAD_HAVE_MPI
@@ -32,6 +31,7 @@
 
 #include <Eigen/Dense>
 
+#include <chrono>
 #include <istream>
 #include <string>
 
@@ -102,7 +102,7 @@ private:
 inline double
 Timer::now()
 {
-    using namespace boost::chrono;
+    using namespace std::chrono;
 
     auto t = high_resolution_clock::now().time_since_epoch();
     auto d = duration_cast<duration<double>>(t);
