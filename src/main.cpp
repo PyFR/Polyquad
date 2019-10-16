@@ -231,7 +231,6 @@ process_eval(const po::variables_map& vm)
                                   : Eigen::NumTraits<T>::dummy_precision();
     const int outprec = vm["output-prec"].as<int>();
 
-
     // Flags
     const bool refine = vm["refine"].as<bool>();
     const bool verbose = vm["verbose"].as<bool>();
@@ -510,7 +509,7 @@ int main(int argc, char *argv[])
                       .add(action_opts[action]);
 
             po::store(po::command_line_parser(argc, argv)
-                        .options(target_opt).positional(pos_opt).run(),
+                      .options(target_opt).positional(pos_opt).run(),
                       vm);
             po::notify(vm);
 
