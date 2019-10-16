@@ -473,7 +473,7 @@ int main(int argc, char *argv[])
     {
         po::variables_map vm;
         po::store(po::command_line_parser(argc, argv)
-                    .options(all_opt).positional(pos_opt).run(),
+                  .options(all_opt).positional(pos_opt).run(),
                   vm);
 
         // Handle --version
