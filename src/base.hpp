@@ -106,7 +106,7 @@ private:
 
     mutable MatrixPtsT pts_;
     mutable MatrixXT obat_;
-    mutable Eigen::JacobiSVD<MatrixXT> svd_;
+    mutable Eigen::HouseholderQR<MatrixXT> qr_;
     mutable MatrixXT A_;
     mutable VectorXT b_;
     mutable VectorXT wts_;
@@ -118,7 +118,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::configure(
         int qdeg,
         const VectorOrb& orbits)
 {
-    using Eigen::JacobiSVD;
+    using Eigen::HouseholderQR;
 
     qdeg_ = qdeg;
     orbits_ = orbits;
@@ -129,8 +129,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::configure(
     A_.resize(nbfn(), nwts());
     b_.resize(nbfn());
     wts_.resize(nwts());
-    svd_ = JacobiSVD<MatrixXT>(A_.rows(), A_.cols(),
-                               Eigen::ComputeThinU | Eigen::ComputeThinV);
+    qr_ = HouseholderQR<MatrixXT>(A_.rows(), A_.cols());
 
     b_.fill(0);
     b_(0) = f0_;
@@ -333,7 +332,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::wts(
     }
 
     // Compute the optimal set of weights
-    wts_ = svd_.compute(A_).solve(b_);
+    wts_ = qr_.compute(A_).solve(b_);
 
     if (resid)
     {
