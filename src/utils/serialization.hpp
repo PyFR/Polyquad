@@ -16,26 +16,19 @@
     along with polyquad.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef POLYQUAD_UTIL_HPP
-#define POLYQUAD_UTIL_HPP
+#ifndef POLYQUAD_UTILS_SERIALIZATION_HPP
+#define POLYQUAD_UTILS_SERIALIZATION_HPP
 
-#include <boost/iostreams/filter/line.hpp>
-
-#ifdef POLYQUAD_HAVE_MPI
-# include <boost/serialization/array.hpp>
-# include <boost/serialization/vector.hpp>
-# ifdef POLYQUAD_HAVE_MPREAL
-#  include <mpreal.h>
-# endif
+#include <boost/serialization/array.hpp>
+#include <boost/serialization/vector.hpp>
+#ifdef POLYQUAD_HAVE_MPREAL
+# include <mpreal.h>
 #endif
 
 #include <Eigen/Dense>
 
-#include <chrono>
-#include <istream>
 #include <string>
 
-#ifdef POLYQUAD_HAVE_MPI
 namespace boost {
 namespace serialization {
 
@@ -80,61 +73,5 @@ serialize(Archive& ar, mpfr::mpreal& m, unsigned int version)
 #endif /* POLYQUAD_HAVE_MPREAL */
 
 } }
-#endif /* POLYQUAD_HAVE_MPI */
 
-namespace polyquad {
-
-class Timer
-{
-public:
-    Timer() : start_(now())
-    {}
-
-    double elapsed() const
-    { return now() - start_; }
-
-private:
-    static double now();
-
-    const double start_;
-};
-
-inline double
-Timer::now()
-{
-    using namespace std::chrono;
-
-    auto t = high_resolution_clock::now().time_since_epoch();
-    auto d = duration_cast<duration<double>>(t);
-
-    return d.count();
-}
-
-
-template<typename Derived>
-std::istream&
-operator>>(std::istream& in, Eigen::MatrixBase<Derived>& m)
-{
-    for (int i = 0; i < m.rows(); ++i)
-        for (int j = 0; j < m.cols(); ++j)
-            in >> m(i, j);
-
-    return in;
-}
-
-class comment_filter : public boost::iostreams::line_filter
-{
-    std::string do_filter(const std::string& line)
-    { return (line.empty() || line[0] == '#') ? "" : line; }
-};
-
-template<typename T1, typename T2, typename T3>
-T2 clamp(const T1& l, const T2& v, const T3& h)
-{
-    return (v < l) ? l : (v > h) ? h : v;
-}
-
-
-}
-
-#endif /* POLYQUAD_UTIL_HPP */
+#endif /* POLYQUAD_UTILS_SERIALIZATION_HPP */

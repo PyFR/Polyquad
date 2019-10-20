@@ -16,12 +16,11 @@
     along with polyquad.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef POLYQUAD_TET_HPP_
-#define POLYQUAD_TET_HPP_
+#ifndef POLYQUAD_SHAPES_TET_HPP
+#define POLYQUAD_SHAPES_TET_HPP
 
-#include "base.hpp"
-#include "jacobi_poly.hpp"
-#include "util.hpp"
+#include "shapes/base.hpp"
+#include "utils/jacobi_poly.hpp"
 
 #include <Eigen/Dense>
 
@@ -321,4 +320,4 @@ TetDomain<T>::clamp_arg(int i, int aoff, VectorXT& args) const
 
 }
 
-#endif /* POLYQUAD_TET_HPP_ */
+#endif /* POLYQUAD_SHAPES_TET_HPP */

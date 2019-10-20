@@ -17,15 +17,20 @@ SET(POLYQUAD_VERSION "${POLYQUAD_VERSION_MAJOR}.${POLYQUAD_VERSION_MINOR}")
 # Source files
 ##################################################
 SET(POLYQUAD_HEADERS
-    src/base.hpp
-    src/util.hpp
-    src/jacobi_poly.hpp
-    src/hex.hpp
-    src/quad.hpp
-    src/tet.hpp
-    src/tri.hpp
-    src/pyr.hpp
-    src/pri.hpp)
+    src/actions/eval.hpp
+    src/actions/expand.hpp
+    src/actions/find.hpp
+    src/shapes/base.hpp
+    src/shapes/hex.hpp
+    src/shapes/quad.hpp
+    src/shapes/tet.hpp
+    src/shapes/tri.hpp
+    src/shapes/pyr.hpp
+    src/shapes/pri.hpp
+    src/utils/io.hpp
+    src/utils/jacobi_poly.hpp
+    src/utils/serialization.hpp
+    src/utils/timer.hpp)
 
 ##################################################
 # Executable
@@ -90,7 +95,7 @@ ENDIF()
 STRING(REPLACE ";" " " CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS}")
 
 ##################################################
-# C++11
+# C++14
 ##################################################
 IF(UNIX)
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wno-deprecated")

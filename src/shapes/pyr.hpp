@@ -16,12 +16,11 @@
     along with polyquad.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef POLYQUAD_PYR_HPP_
-#define POLYQUAD_PYR_HPP_
+#ifndef POLYQUAD_SHAPES_PYR_HPP
+#define POLYQUAD_SHAPES_PYR_HPP
 
-#include "base.hpp"
-#include "jacobi_poly.hpp"
-#include "util.hpp"
+#include "shapes/base.hpp"
+#include "utils/jacobi_poly.hpp"
 
 #include <Eigen/Dense>
 
@@ -272,4 +271,4 @@ PyrDomain<T>::clamp_arg(int i, int aoff, VectorXT& args) const
 
 }
 
-#endif /* POLYQUAD_PYR_HPP_ */
+#endif /* POLYQUAD_SHAPES_PYR_HPP */

@@ -16,8 +16,8 @@
     along with polyquad.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef POLYQUAD_BASE_HPP
-#define POLYQUAD_BASE_HPP
+#ifndef POLYQUAD_SHAPES_BASE_HPP
+#define POLYQUAD_SHAPES_BASE_HPP
 
 #include <Eigen/Dense>
 #include <Eigen/LevenbergMarquardt>
@@ -28,6 +28,12 @@
 #include <vector>
 
 namespace polyquad {
+
+template<typename T1, typename T2, typename T3>
+T2 clamp(const T1& l, const T2& v, const T3& h)
+{
+    return (v < l) ? l : (v > h) ? h : v;
+}
 
 template<typename Derived, typename T, int Ndim, int Norbits>
 class BaseDomain
@@ -411,4 +417,4 @@ BaseDomain<Derived, T, Ndim, Norbits>::symm_decomps_recurse(
 
 }
 
-#endif /* POLYQUAD_BASE_HPP */
+#endif /* POLYQUAD_SHAPES_BASE_HPP */

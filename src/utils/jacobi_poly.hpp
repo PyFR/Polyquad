@@ -16,8 +16,8 @@
     along with polyquad.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef POLYQUAD_JACOBI_POLY_HPP
-#define POLYQUAD_JACOBI_POLY_HPP
+#ifndef POLYQUAD_UTILS_JACOBI_POLY_HPP
+#define POLYQUAD_UTILS_JACOBI_POLY_HPP
 
 #include <Eigen/Dense>
 
@@ -62,4 +62,4 @@ jacobi_poly(int n, int a, int b, const Eigen::DenseBase<D>& x)
 
 }
 
-#endif /* POLYQUAD_JACOBI_POLY_HPP */
+#endif /* POLYQUAD_UTILS_JACOBI_POLY_HPP */
