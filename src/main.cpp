@@ -31,7 +31,6 @@
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/program_options.hpp>
-
 #include <Eigen/Dense>
 #ifdef POLYQUAD_HAVE_MPREAL
 # include <mpreal.h>
@@ -46,8 +45,6 @@
 
 namespace po = boost::program_options;
 using namespace polyquad;
-
-
 
 template<template<typename> class Domain, typename T>
 void process_dispatch(const po::variables_map& vm)
