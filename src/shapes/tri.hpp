@@ -186,21 +186,23 @@ TriDomain<T>::eval_orthob_block(const D1 pq, D2 out) const
     const auto& p = pq.col(0);
     const auto& q = pq.col(1);
 
-    const auto& a = (q != 1).select(2*(1 + p)/(1 - q) - 1, 0);
-    const auto& b = q;
+    const ArrayT a = (q != 1).select(2*(1 + p)/(1 - q) - 1, 0);
+    const ArrayT b = q;
 
     ArrayT pow1mbi = ArrayT::Constant(p.size(), 1);
     T pow2ip1 = 0.5;
 
+    JacobiP<ArrayT> jpa(0, 0, a);
+
     for (int i = 0, off = 0; i <= this->qdeg(); ++i)
     {
+        JacobiP<ArrayT> jpb(2*i + 1, 0, b);
+
         for (int j = i; j <= this->qdeg() - i; ++j, ++off)
         {
             T cij = sqrt(T((2*i + 1)*(2*i + 2*j + 2)))*pow2ip1;
 
-            out.row(off) = cij*pow1mbi
-                         * jacobi_poly(i, 0, 0, a)
-                         * jacobi_poly(j, 2*i + 1, 0, b);
+            out.row(off) = cij*pow1mbi*jpa(i)*jpb(j);
         }
 
         pow1mbi *= 1 - b;

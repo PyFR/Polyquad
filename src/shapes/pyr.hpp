@@ -218,22 +218,23 @@ PyrDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
 
     ArrayT pow1mci = ArrayT::Constant(p.size(), 1);
 
+    JacobiP<ArrayT> jpa(0, 0, a);
+
     for (int i = 0, off = 0; i <= this->qdeg(); i += 2)
     {
         ArrayT pow1mcj = pow1mci;
+        JacobiP<ArrayT> jpb(0, 0, b);
 
         for (int j = i; j <= this->qdeg() - i; j += 2)
         {
             T cij = exp2(-j - i - half);
+            JacobiP<ArrayT> jpc(2*(i + j + 1), 0, c);
 
             for (int k = 0; k <= this->qdeg() - i - j; ++k, ++off)
             {
                 T cijk = cij*sqrt((2*(k + j + i) + 3)*(i + half)*(j + half));
 
-                out.row(off) = cijk*pow1mci*pow1mcj
-                             * jacobi_poly(i, 0, 0, a)
-                             * jacobi_poly(j, 0, 0, b)
-                             * jacobi_poly(k, 2*(i + j + 1), 0, c);
+                out.row(off) = cijk*pow1mci*pow1mcj*jpa(i)*jpb(j)*jpc(k);
             }
 
             pow1mcj *= (1 - c)*(1 - c);

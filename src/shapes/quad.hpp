@@ -193,20 +193,22 @@ QuadDomain<T>::eval_orthob_block(const D1 pq, D2 out) const
 {
     typedef Eigen::Array<T, D1::RowsAtCompileTime, 1> ArrayT;
 
+    const T half = 0.5;
+
     const auto& p = pq.col(0);
     const auto& q = pq.col(1);
 
-    const T half = 0.5;
+    JacobiP<ArrayT> jpp(0, 0, p);
 
     for (int i = 0, off = 0; i <= this->qdeg(); i += 2)
     {
+        JacobiP<ArrayT> jpq(0, 0, q);
+
         for (int j = i; j <= this->qdeg() - i; j += 2, ++off)
         {
             T cij = sqrt((i + half)*(j + half));
 
-            out.row(off) = cij
-                         * jacobi_poly(i, 0, 0, p)
-                         * jacobi_poly(j, 0, 0, q);
+            out.row(off) = cij*jpp(i)*jpq(j);
         }
     }
 }

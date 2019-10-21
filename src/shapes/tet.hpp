@@ -248,37 +248,38 @@ TetDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
 {
     typedef Eigen::Array<T, D1::RowsAtCompileTime, 1> ArrayT;
 
+    const T one = 1;
+
     const auto& p = pqr.col(0);
     const auto& q = pqr.col(1);
     const auto& r = pqr.col(2);
 
-    const auto& a = (q != -r).select(-2*(1 + p)/(q + r) - 1, 0);
-    const auto& b = (r != 1).select(2*(1 + q)/(1 - r) - 1, 0);
-    const auto& c = r;
-
-    const T one = 1;
+    const ArrayT a = (q != -r).select(-2*(1 + p)/(q + r) - 1, 0);
+    const ArrayT b = (r != 1).select(2*(1 + q)/(1 - r) - 1, 0);
+    const ArrayT c = r;
 
     ArrayT pow1mbi = ArrayT::Constant(p.size(), 1);
     ArrayT pow1mci = ArrayT::Constant(p.size(), 1);
 
+    JacobiP<ArrayT> jpa(0, 0, a);
+
     for (int i = 0, off = 0; i <= this->qdeg(); ++i)
     {
         T ci = exp2(T(-2*i - 1.5))*sqrt(T(4*i + 2));
-
         ArrayT pow1mcj = pow1mci;
+        JacobiP<ArrayT> jpb(2*i + 1, 0, b);
 
         for (int j = i; j <= this->qdeg() - i; ++j)
         {
             T cij = ci*sqrt(T(i + j + 1))*ldexp(one, -j);
+            JacobiP<ArrayT> jpc(2*(i + j + 1), 0, c);
 
             for (int k = j; k <= this->qdeg() - i - j; ++k, ++off)
             {
                 T cijk = cij*sqrt(T(2*(k + j + i) + 3));
 
                 out.row(off) = cijk*pow1mbi*pow1mci*pow1mcj
-                             * jacobi_poly(i, 0, 0, a)
-                             * jacobi_poly(j, 2*i + 1, 0, b)
-                             * jacobi_poly(k, 2*(i + j + 1), 0, c);
+                             * jpa(i)*jpb(j)*jpc(k);
             }
 
             pow1mcj *= 1 - c;

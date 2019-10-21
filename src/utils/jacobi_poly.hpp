@@ -23,41 +23,58 @@
 
 namespace polyquad {
 
-
-template<typename D>
-Eigen::Array<typename D::Scalar, D::RowsAtCompileTime, D::ColsAtCompileTime>
-jacobi_poly(int n, int a, int b, const Eigen::DenseBase<D>& x)
+template<typename ArrayT>
+class JacobiP
 {
-    typedef typename D::Scalar T;
-    typedef Eigen::Array<T, D::RowsAtCompileTime, D::ColsAtCompileTime> ArrayT;
+public:
+    typedef typename ArrayT::Scalar T;
 
-    ArrayT xv = x;
-    int apb = a + b, amb = a - b, bbmaa = b*b - a*a;
+public:
+    JacobiP(int a, int b, const ArrayT& x) : a_(a), b_(b), q_(0), x_(x)
+    {}
 
-    if (n == 0)
-        return ArrayT::Constant(x.rows(), x.cols(), 1);
-    else if (n == 1)
-        return ((apb + 2)*xv + amb) / 2;
-    else
+    ArrayT operator()(int n);
+
+private:
+    const int a_, b_;
+    int q_;
+
+    const ArrayT x_;
+    ArrayT jm1_, jm2_;
+};
+
+template<typename ArrayT>
+EIGEN_ALWAYS_INLINE ArrayT
+JacobiP<ArrayT>::operator()(int n)
+{
+    assert(q_ <= n && "Polynomials must be evaluated in sequence");
+
+    int apb = a_ + b_, amb = a_ - b_, bbmaa = b_*b_ - a_*a_;
+
+    for (; q_ <= n; ++q_)
     {
-        ArrayT jm1 = ((apb + 2)*xv + amb) / 2;
-        ArrayT jm2 = ArrayT::Constant(x.rows(), x.cols(), 1);
-
-        for (int q = 2; q <= n; ++q)
+        if (q_ == 0)
+            jm1_ = ArrayT::Constant(x_.rows(), x_.cols(), 1);
+        else if (q_ == 1)
         {
-            int qapbpq = q*(apb + q), apbp2q = apb + 2*q;
+            jm2_ = jm1_;
+            jm1_ = ((apb + 2)*x_ + amb) / 2;
+        }
+        else
+        {
+            int qapbpq = q_*(apb + q_), apbp2q = apb + 2*q_;
             int apbp2qm1 = apbp2q - 1, apbp2qm2 = apbp2q - 2;
 
             T aq = T(apbp2q*apbp2qm1) / (2*qapbpq);
             T bq = T(apbp2qm1*bbmaa) / (2*qapbpq*apbp2qm2);
-            T cq = T(apbp2q)*((a + q - 1)*(b + q - 1)) / (qapbpq*apbp2qm2);
+            T cq = T(apbp2q)*((a_ + q_ - 1)*(b_ + q_ - 1)) / (qapbpq*apbp2qm2);
 
-            std::swap(jm1, jm2);
-            jm1 = (aq*xv - bq)*jm2 - cq*jm1;
+            std::swap(jm1_, jm2_);
+            jm1_ = (aq*x_ - bq)*jm2_ - cq*jm1_;
         }
-
-        return jm1;
     }
+
+    return jm1_;
 }
 
 }
