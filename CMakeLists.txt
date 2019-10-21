@@ -101,12 +101,6 @@ IF(UNIX)
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wno-deprecated")
 ENDIF()
 
-INCLUDE(CheckCXXCompilerFlag)
-CHECK_CXX_COMPILER_FLAG(-fabi-version=0 HAVE_ABI_VERSION)
-IF(HAVE_ABI_VERSION)
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fabi-version=0")
-ENDIF()
-
 ##################################################
 # Build type
 ##################################################
