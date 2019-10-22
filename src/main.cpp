@@ -21,6 +21,7 @@
 #include "actions/eval.hpp"
 #include "actions/expand.hpp"
 #include "actions/find.hpp"
+#include "actions/iterate.hpp"
 #include "shapes/quad.hpp"
 #include "shapes/tri.hpp"
 #include "shapes/tet.hpp"
@@ -53,10 +54,13 @@ void process_dispatch(const po::variables_map& vm)
 
     if (action == "find")
         process_find<Domain, T>(vm);
+    else if (action == "iterate")
+        process_iterate<Domain, T>(vm);
     else if (action == "eval")
         process_eval<Domain, T>(vm);
     else if (action == "expand")
         process_expand<Domain, T>(vm);
+
 }
 
 int main(int argc, const char *argv[])
@@ -103,6 +107,8 @@ int main(int argc, const char *argv[])
         ("qdeg,q", po::value<int>()->required(), "Target quadrature degree")
         ("maxfev,m", po::value<int>()->default_value(-1, ""),
          "Maximum number of objective function evaluations")
+        ("positive,p", po::value<bool>()->default_value(false)->zero_tokens(),
+         "Enforce positivity of weights")
 #ifdef POLYQUAD_HAVE_MPREAL
         ("mpfr-bits",
          po::value<int>()->default_value(256)
@@ -133,9 +139,13 @@ int main(int argc, const char *argv[])
         ("nprelim,f", po::value<int>()->default_value(8),
          "For two phase runs how many preliminary runs to perform")
         ("two-phase,b", po::value<bool>()->default_value(false)->zero_tokens(),
-         "Employ a two phase approach to rule finding")
-        ("positive,p", po::value<bool>()->default_value(false)->zero_tokens(),
-         "Enforce positivity of weights");
+         "Employ a two phase approach to rule finding");
+
+    // Rule iteration specific options
+    action_opts.insert({"iterate", std::string("Iterate action options")});
+    action_opts["iterate"].add_options()
+        ("lb,l", po::value<int>()->required(), "Lower bound")
+        ("ub,u", po::value<int>()->required(), "Upper bound");
 
     // Rule evaluation specific options
     action_opts.insert({"eval", std::string("Eval action options")});
@@ -174,7 +184,7 @@ int main(int argc, const char *argv[])
         if (vm.count("help") || !vm.count("action"))
         {
             std::cout << "Usage: polyquad [OPTION...] <action>\n\n"
-                         "<action> is one of: find, eval, expand\n";
+                         "<action> is one of: find, iterate, eval, expand\n";
             std::cout << generic_opt << "\n";
 
             for (const auto& aopt : action_opts)

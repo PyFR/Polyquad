@@ -20,6 +20,7 @@ SET(POLYQUAD_HEADERS
     src/actions/eval.hpp
     src/actions/expand.hpp
     src/actions/find.hpp
+    src/actions/iterate.hpp
     src/shapes/base.hpp
     src/shapes/hex.hpp
     src/shapes/quad.hpp
