@@ -16,6 +16,9 @@
     along with polyquad.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef POLYQUAD_ACTIONS_EVAL_HPP
+#define POLYQUAD_ACTIONS_EVAL_HPP
+
 #include "utils/io.hpp"
 
 #include <boost/iostreams/filtering_stream.hpp>
@@ -112,3 +115,5 @@ process_eval(const boost::program_options::variables_map& vm)
 }
 
 }
+
+#endif /* POLYQUAD_ACTIONS_EVAL_HPP */

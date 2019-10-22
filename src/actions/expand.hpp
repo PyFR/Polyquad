@@ -16,6 +16,9 @@
     along with polyquad.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef POLYQUAD_ACTIONS_EXPAND_HPP
+#define POLYQUAD_ACTIONS_EXPAND_HPP
+
 #include "config.h"
 
 #include "utils/io.hpp"
@@ -98,3 +101,5 @@ process_expand(const boost::program_options::variables_map& vm)
 }
 
 }
+
+#endif /* POLYQUAD_ACTIONS_EXPAND_HPP */
