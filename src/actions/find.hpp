@@ -245,7 +245,8 @@ process_find(const boost::program_options::variables_map& vm)
 
             for (const auto& r : rules[i])
             {
-                std::cout << "# Rule degree: " << qdeg << "\n";
+                std::cout << "# Rule degree: " << qdeg
+                          << " ("  << npts << " pts)\n";
                 print_compact(std::cout, outprec, orbits[i], r);
                 std::cout << std::endl;
             }
