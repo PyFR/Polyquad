@@ -43,6 +43,7 @@ public:
     typedef Eigen::Matrix<T, Eigen::Dynamic, 1> VectorXT;
     typedef Eigen::Array<T, Eigen::Dynamic, 1> ArrayXT;
     typedef Eigen::Matrix<T, Eigen::Dynamic, Ndim> MatrixPtsT;
+    typedef Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> MatrixObatT;
     typedef Eigen::Matrix<int, Norbits, 1> VectorOrb;
 
 public:
@@ -64,7 +65,7 @@ public:
 
     void expand(const VectorXT& args, MatrixPtsT& pts) const;
 
-    void eval_orthob(const MatrixPtsT& pts, MatrixXT& out) const;
+    void eval_orthob(const MatrixPtsT& pts, MatrixObatT& out) const;
 
     void expand_wts(const VectorXT& wargs, VectorXT& wts) const;
 
@@ -111,7 +112,7 @@ private:
     std::mt19937 rand_eng_;
 
     mutable MatrixPtsT pts_;
-    mutable MatrixXT obat_;
+    mutable MatrixObatT obat_;
     mutable Eigen::HouseholderQR<MatrixXT> qr_;
     mutable MatrixXT A_;
     mutable VectorXT b_;
@@ -219,7 +220,7 @@ template<typename Derived, typename T, int Ndim, int Norbits>
 inline void
 BaseDomain<Derived, T, Ndim, Norbits>::eval_orthob(
         const MatrixPtsT& pts,
-        MatrixXT& out) const
+        MatrixObatT& out) const
 {
     const Derived& derived = static_cast<const Derived&>(*this);
 
@@ -334,7 +335,8 @@ BaseDomain<Derived, T, Ndim, Norbits>::wts(
         int pinc = derived.npts_for_orbit(i);
 
         for (int j = 0; j < orbits_(i); ++j, ++coff, poff += pinc)
-            A_.col(coff) = obat_.middleCols(poff, pinc).rowwise().sum();
+            for (int l = 0; l < A_.rows(); ++l)
+                A_(l, coff) = obat_.block(l, poff, 1, pinc).sum();
     }
 
     // Compute the optimal set of weights
