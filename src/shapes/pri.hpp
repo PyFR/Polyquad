@@ -50,11 +50,11 @@ public:
 private:
     friend class BaseDomain<PriDomain<T>, T, 3, 6>;
 
-    int npts_for_orbit(int i) const;
+    constexpr int npts_for_orbit(int i) const;
 
-    int narg_for_orbit(int i) const;
+    constexpr int narg_for_orbit(int i) const;
 
-    int nbfn_for_qdeg(int qdeg) const;
+    constexpr int nbfn_for_qdeg(int qdeg) const;
 
     void expand_orbit(int i, int aoff, int poff,
                       const VectorXT& args, MatrixPtsT& pts) const;
@@ -73,7 +73,7 @@ private:
 };
 
 template<typename T>
-inline int
+inline constexpr int
 PriDomain<T>::npts_for_orbit(int i) const
 {
     switch (i)
@@ -95,7 +95,7 @@ PriDomain<T>::npts_for_orbit(int i) const
 }
 
 template<typename T>
-inline int
+inline constexpr int
 PriDomain<T>::narg_for_orbit(int i) const
 {
     switch (i)
@@ -116,7 +116,7 @@ PriDomain<T>::narg_for_orbit(int i) const
 }
 
 template<typename T>
-inline int
+inline constexpr int
 PriDomain<T>::nbfn_for_qdeg(int qdeg) const
 {
     int n = 0;

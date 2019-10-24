@@ -54,7 +54,7 @@ public:
 
     void configure(int qdeg, const VectorOrb& orbits);
 
-    std::vector<VectorOrb> symm_decomps(int npts);
+    std::vector<VectorOrb> symm_decomps(int npts) const;
 
     void seed();
 
@@ -101,7 +101,7 @@ private:
     void symm_decomps_recurse(VectorOrb coeffs,
                               int sum,
                               VectorOrb& partsoln,
-                              std::vector<VectorOrb>& solns);
+                              std::vector<VectorOrb>& solns) const;
 
     int qdeg_;
     const T f0_;
@@ -144,9 +144,9 @@ BaseDomain<Derived, T, Ndim, Norbits>::configure(
 
 template<typename Derived, typename T, int Ndim, int Norbits>
 inline std::vector<typename BaseDomain<Derived, T, Ndim, Norbits>::VectorOrb>
-BaseDomain<Derived, T, Ndim, Norbits>::symm_decomps(int npts)
+BaseDomain<Derived, T, Ndim, Norbits>::symm_decomps(int npts) const
 {
-    Derived& derived = static_cast<Derived&>(*this);
+    const Derived& derived = static_cast<const Derived&>(*this);
     VectorOrb coeffs;
 
     for (int i = 0; i < Norbits; ++i)
@@ -383,7 +383,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::symm_decomps_recurse(
         VectorOrb coeffs,
         int sum,
         VectorOrb& partsoln,
-        std::vector<VectorOrb>& solns)
+        std::vector<VectorOrb>& solns) const
 {
     int index;
     int mcoeff = coeffs.maxCoeff(&index);

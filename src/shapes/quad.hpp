@@ -50,11 +50,11 @@ public:
 private:
     friend class BaseDomain<QuadDomain<T>, T, 2, 4>;
 
-    int npts_for_orbit(int i) const;
+    constexpr int npts_for_orbit(int i) const;
 
-    int narg_for_orbit(int i) const;
+    constexpr int narg_for_orbit(int i) const;
 
-    int nbfn_for_qdeg(int qdeg) const;
+    constexpr int nbfn_for_qdeg(int qdeg) const;
 
     void expand_orbit(int i, int aoff, int poff,
                       const VectorXT& args,
@@ -69,7 +69,7 @@ private:
 };
 
 template<typename T>
-inline int
+inline constexpr int
 QuadDomain<T>::npts_for_orbit(int i) const
 {
     switch (i)
@@ -87,7 +87,7 @@ QuadDomain<T>::npts_for_orbit(int i) const
 }
 
 template<typename T>
-inline int
+inline constexpr int
 QuadDomain<T>::narg_for_orbit(int i) const
 {
     switch (i)
@@ -105,7 +105,7 @@ QuadDomain<T>::narg_for_orbit(int i) const
 }
 
 template<typename T>
-inline int
+inline constexpr int
 QuadDomain<T>::nbfn_for_qdeg(int qdeg) const
 {
     int n = 0;
