@@ -47,7 +47,7 @@ template<typename ArrayT>
 EIGEN_ALWAYS_INLINE ArrayT
 JacobiP<ArrayT>::operator()(int n)
 {
-    assert(q_ <= n && "Polynomials must be evaluated in sequence");
+    assert(q_ - 1 <= n && "Polynomials must be evaluated in sequence");
 
     int apb = a_ + b_, amb = a_ - b_, bbmaa = b_*b_ - a_*a_;
 
