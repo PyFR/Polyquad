@@ -60,7 +60,6 @@ void process_dispatch(const po::variables_map& vm)
         process_eval<Domain, T>(vm);
     else if (action == "expand")
         process_expand<Domain, T>(vm);
-
 }
 
 int main(int argc, const char *argv[])
