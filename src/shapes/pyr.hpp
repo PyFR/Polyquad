@@ -206,8 +206,6 @@ PyrDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
 {
     typedef Eigen::Array<T, D1::RowsAtCompileTime, 1> ArrayT;
 
-    const T half = 0.5;
-
     const auto& p = pqr.col(0);
     const auto& q = pqr.col(1);
     const auto& r = pqr.col(2);
@@ -216,18 +214,23 @@ PyrDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
     const auto& b = (r != 1).select(2*q/(1 - r), 0);
     const auto& c = r;
 
+    const T half = 0.5;
+    const T pow2m12 = sqrt(half);
+    T pow2mi = 1;
+
     ArrayT pow1mci = ArrayT::Constant(p.size(), 1);
 
     JacobiP<ArrayT> jpa(0, 0, a);
 
     for (int i = 0, off = 0; i <= this->qdeg(); i += 2)
     {
+        T pow2mj = pow2mi;
         ArrayT pow1mcj = pow1mci;
         JacobiP<ArrayT> jpb(0, 0, b);
 
         for (int j = i; j <= this->qdeg() - i; j += 2)
         {
-            T cij = exp2(-j - i - half);
+            T cij = pow2m12*pow2mi*pow2mj;
             JacobiP<ArrayT> jpc(2*(i + j + 1), 0, c);
 
             for (int k = 0; k <= this->qdeg() - i - j; ++k, ++off)
@@ -237,9 +240,11 @@ PyrDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
                 out.row(off) = cijk*pow1mci*pow1mcj*jpa(i)*jpb(j)*jpc(k);
             }
 
+            pow2mj /= 4;
             pow1mcj *= (1 - c)*(1 - c);
         }
 
+        pow2mi /= 4;
         pow1mci *= (1 - c)*(1 - c);
     }
 }
