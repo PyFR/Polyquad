@@ -244,8 +244,6 @@ PriDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
 {
     typedef Eigen::Array<T, D1::RowsAtCompileTime, 1> ArrayT;
 
-    const T half = 0.5;
-
     const auto& p = pqr.col(0);
     const auto& q = pqr.col(1);
     const auto& r = pqr.col(2);
@@ -254,9 +252,8 @@ PriDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
     const auto& b = q;
     const auto& c = r;
 
+    T pow2ip1 = 0.5;
     ArrayT pow1mqi = ArrayT::Constant(p.size(), 1);
-    T pow2ip1 = half;
-
     JacobiP<ArrayT> jpa(0, 0, a);
 
     for (int i = 0, off = 0; i <= this->qdeg(); ++i)
@@ -265,12 +262,11 @@ PriDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
 
         for (int j = i; j <= this->qdeg() - i; ++j)
         {
-            T cij = sqrt(T((2*i + 1)*(2*i + 2*j + 2)))*pow2ip1;
             JacobiP<ArrayT> jpc(0, 0, c);
 
             for (int k = 0; k <= this->qdeg() - i - j; k += 2, ++off)
             {
-                T cijk = cij*sqrt(k + half);
+                T cijk = pow2ip1*sqrt(T((2*i + 1)*(2*k + 1)*(i + j + 1)));
 
                 out.row(off) = cijk*pow1mqi*jpa(i)*jpb(j)*jpc(k);
             }

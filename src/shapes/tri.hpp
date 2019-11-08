@@ -189,9 +189,8 @@ TriDomain<T>::eval_orthob_block(const D1 pq, D2 out) const
     const ArrayT a = (q != 1).select(2*(1 + p)/(1 - q) - 1, 0);
     const ArrayT b = q;
 
-    ArrayT pow1mbi = ArrayT::Constant(p.size(), 1);
     T pow2ip1 = 0.5;
-
+    ArrayT pow1mbi = ArrayT::Constant(p.size(), 1);
     JacobiP<ArrayT> jpa(0, 0, a);
 
     for (int i = 0, off = 0; i <= this->qdeg(); ++i)

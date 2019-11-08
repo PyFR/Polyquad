@@ -258,6 +258,9 @@ TetDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
     const ArrayT b = (r != 1).select(2*(1 + q)/(1 - r) - 1, 0);
     const ArrayT c = r;
 
+    const T pow2m32 = exp2(T(-1.5));
+    T pow2mi = 1;
+
     ArrayT pow1mbi = ArrayT::Constant(p.size(), 1);
     ArrayT pow1mci = ArrayT::Constant(p.size(), 1);
 
@@ -265,26 +268,29 @@ TetDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
 
     for (int i = 0, off = 0; i <= this->qdeg(); ++i)
     {
-        T ci = exp2(T(-2*i - 1.5))*sqrt(T(4*i + 2));
+        T ci = pow2mi*pow2mi*pow2m32;
+        T pow2mj = pow2mi;
         ArrayT pow1mcj = pow1mci;
         JacobiP<ArrayT> jpb(2*i + 1, 0, b);
 
         for (int j = i; j <= this->qdeg() - i; ++j)
         {
-            T cij = ci*sqrt(T(i + j + 1))*ldexp(one, -j);
+            T cij = ci*pow2mj;
             JacobiP<ArrayT> jpc(2*(i + j + 1), 0, c);
 
             for (int k = j; k <= this->qdeg() - i - j; ++k, ++off)
             {
-                T cijk = cij*sqrt(T(2*(k + j + i) + 3));
+                T cijk = cij*sqrt(T((2*(k + j + i) + 3)*(i + j + 1)*(4*i + 2)));
 
                 out.row(off) = cijk*pow1mbi*pow1mci*pow1mcj
                              * jpa(i)*jpb(j)*jpc(k);
             }
 
+            pow2mj /= 2;
             pow1mcj *= 1 - c;
         }
 
+        pow2mi /= 2;
         pow1mbi *= 1 - b;
         pow1mci *= 1 - c;
     }
