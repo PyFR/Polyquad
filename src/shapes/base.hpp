@@ -71,8 +71,7 @@ public:
 
     std::tuple<T, VectorXT> minimise(int maxfev);
 
-    const VectorXT& wts(const VectorXT& args,
-                        VectorXT* resid=nullptr);
+    VectorXT wts(const VectorXT& args, VectorXT* resid=nullptr);
 
     int qdeg() const
     { return qdeg_; }
@@ -321,7 +320,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::minimise(int maxfev)
 }
 
 template<typename Derived, typename T, int Ndim, int Norbits>
-inline const typename BaseDomain<Derived, T, Ndim, Norbits>::VectorXT&
+inline typename BaseDomain<Derived, T, Ndim, Norbits>::VectorXT
 BaseDomain<Derived, T, Ndim, Norbits>::wts(
         const VectorXT& args, VectorXT* resid)
 {
