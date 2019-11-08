@@ -119,7 +119,7 @@ TetDomain<T>::nbfn_for_qdeg(int qdeg) const
 {
     int n = 0;
 
-    for (int i = 0; i <= qdeg; ++i)
+    for (int i = 0; i <= qdeg; i += 2)
         for (int j = i; j <= qdeg - i; ++j)
             for (int k = j; k <= qdeg - i - j; ++k, ++n);
 
@@ -266,7 +266,7 @@ TetDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
 
     JacobiP<ArrayT> jpa(0, 0, a);
 
-    for (int i = 0, off = 0; i <= this->qdeg(); ++i)
+    for (int i = 0, off = 0; i <= this->qdeg(); i += 2)
     {
         T ci = pow2mi*pow2mi*pow2m32;
         T pow2mj = pow2mi;
@@ -290,9 +290,9 @@ TetDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
             pow1mcj *= 1 - c;
         }
 
-        pow2mi /= 2;
-        pow1mbi *= 1 - b;
-        pow1mci *= 1 - c;
+        pow2mi /= 4;
+        pow1mbi *= (1 - b)*(1 - b);
+        pow1mci *= (1 - c)*(1 - c);
     }
 }
 

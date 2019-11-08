@@ -121,7 +121,7 @@ PriDomain<T>::nbfn_for_qdeg(int qdeg) const
 {
     int n = 0;
 
-    for (int i = 0; i <= qdeg; ++i)
+    for (int i = 0; i <= qdeg; i += 2)
         for (int j = i; j <= qdeg - i; ++j)
             for (int k = 0; k <= qdeg - i - j; k += 2, ++n);
 
@@ -256,7 +256,7 @@ PriDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
     ArrayT pow1mqi = ArrayT::Constant(p.size(), 1);
     JacobiP<ArrayT> jpa(0, 0, a);
 
-    for (int i = 0, off = 0; i <= this->qdeg(); ++i)
+    for (int i = 0, off = 0; i <= this->qdeg(); i += 2)
     {
         JacobiP<ArrayT> jpb(2*i + 1, 0, b);
 
@@ -272,8 +272,8 @@ PriDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
             }
         }
 
-        pow1mqi *= 1 - b;
-        pow2ip1 /= 2;
+        pow1mqi *= (1 - b)*(1 - b);
+        pow2ip1 /= 4;
     }
 }
 
