@@ -38,6 +38,7 @@
 #include <map>
 #include <random>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 namespace polyquad {
@@ -78,6 +79,16 @@ int probe_npts(mpi::communicator& world)
     }
 
     return rnpts;
+}
+
+void post_rule(mpi::communicator& world, int npts, const std::string& rstr)
+{
+    // Send the rule to the root rank for printing
+    if (world.rank() != 0)
+        world.send(0, rule_tag, rstr);
+
+    // Inform all other ranks of our progress
+    post_npts(world, npts);
 }
 
 void probe_rules(mpi::communicator& world)
@@ -166,13 +177,17 @@ process_iterate(const boost::program_options::variables_map& vm)
     std::mt19937 rand_eng((std::random_device()()));
 
     // Determine which point counts yield valid decompositions
-    std::map<int, std::vector<VectorOrb>> nptsorbits;
+    std::map<int, std::pair<std::vector<VectorOrb>, std::vector<double>>> nptsorbits;
     for (int i = lb + 1; i < ub; ++i)
     {
-        auto orb = dom.symm_decomps(i);
+        std::vector<VectorOrb> orb = dom.symm_decomps(i);
 
         if (orb.size())
-            nptsorbits.insert({i, orb});
+        {
+            std::vector<double> norms(orb.size(), 1e8);
+
+            nptsorbits.insert({i, make_pair(orb, norms)});
+        }
     }
 
     int npts;
@@ -194,19 +209,11 @@ start:
         npts = pick_npts(rand_eng, lambda, lb, ub);
     } while (!nptsorbits.count(npts));
 
-    // Obtain the valid orbital decompositions of npts
-    const auto& orbits = nptsorbits[npts];
+    // Obtain the orbital decompositions of npts and their associated norms
+    const auto& orbits = nptsorbits[npts].first;
+    auto& norms = nptsorbits[npts].second;
 
-    // Sequence in which the orbits should be considered
-    std::vector<int> orbitseq(orbits.size());
-    std::iota(std::begin(orbitseq), std::end(orbitseq), 0);
-
-    // Decide how many orbits to consider
-    const int tryorbs = std::min<int>(std::max<int>(5, orbits.size() / 10),
-                                      orbits.size());
-
-    std::vector<double> norms(orbits.size(), 1000);
-
+    // Update the norms associated with each orbit
     for (int i = 0; i < orbits.size(); ++i)
     {
         dom.configure(qdeg, orbits[i]);
@@ -219,58 +226,17 @@ start:
             // Attempt to minimise
             std::tie(norm, args) = dom.minimise(maxfev);
 
-            // Save the norm
+            // Update the norm
             norms[i] = std::min(norm, norms[i]);
-        };
-    }
 
-    // Determine the order in which we should examine the orbits
-    std::sort(std::begin(orbitseq), std::end(orbitseq),
-              [&norms](int i, int j) { return norms[i] < norms[j]; });
-    orbitseq.resize(tryorbs);
-
-    Timer t;
-
-    for (int j = 0; ; j = (j + 1) % orbitseq.size())
-    {
-        const int i = orbitseq[j];
-
-        // Configure the domain for this orbit
-        dom.configure(qdeg, orbits[i]);
-
-        // Attempt to find a rule
-        for (int k = 0; k < 8; ++k)
-        {
-#ifdef POLYQUAD_HAVE_MPI
-            // If we are the root rank see if any rules need printing
-            if (rank == 0)
-                probe_rules(world);
-
-            // See if another rank has made progress
-            ub = std::min(probe_npts(world), ub);
-            if (npts >= ub)
-                goto start;
-#endif
-
-            // Seed the orbit
-            dom.seed();
-
-            // Attempt to minimise
-            std::tie(norm, args) = dom.minimise(maxfev);
-
-            // See if a rule has been found
-            if (norm < tol  && (!poswts || (dom.wts(args).minCoeff() > 0)))
+            // If we're lucky we may have found a rule
+            if (norm < tol && (!poswts || (dom.wts(args).minCoeff() > 0)))
             {
                 // Convert the rule to a string
                 auto rstr = rule_to_str(qdeg, npts, orbits[i], args, outprec);
 
 #ifdef POLYQUAD_HAVE_MPI
-                // Post the rule to the root rank for printing
-                if (rank != 0)
-                    world.send(0, rule_tag, rstr);
-
-                // Inform all other ranks of our progress
-                post_npts(world, npts);
+                post_rule(world, npts, rstr);
 #endif
 
                 if (rank == 0)
@@ -280,10 +246,68 @@ start:
                 ub = npts;
                 goto start;
             }
-            // If too much time has elapsed go back to the start
-            else if (t.elapsed() > timeout)
-                goto start;
+        };
+    }
+
+    // Use these norms to determine a sequence in which to examine the orbits
+    std::vector<int> orbitseq(orbits.size());
+    std::iota(std::begin(orbitseq), std::end(orbitseq), 0);
+    std::sort(std::begin(orbitseq), std::end(orbitseq),
+              [&norms](int i, int j) { return norms[i] < norms[j]; });
+
+    // Limit ourselves to the top ten orbits
+    const int tryorbs = std::min<int>(10, orbits.size());
+
+    // Start the timer
+    Timer t;
+
+    for (int j = 0; ; j = (j + 1) % tryorbs)
+    {
+        const int i = orbitseq[j];
+
+#ifdef POLYQUAD_HAVE_MPI
+        // If we are the root rank see if any rules need printing
+        if (rank == 0)
+            probe_rules(world);
+
+        // See if another rank has made progress
+        ub = std::min(probe_npts(world), ub);
+        if (npts >= ub)
+            goto start;
+#endif
+
+        // Configure the domain for this orbit
+        dom.configure(qdeg, orbits[i]);
+
+        // Seed the orbit
+        dom.seed();
+
+        // Attempt to minimise
+        std::tie(norm, args) = dom.minimise(maxfev);
+
+        // Update the norm for this orbit
+        norms[i] = std::min(norm, norms[i]);
+
+        // See if a rule has been found
+        if (norm < tol && (!poswts || (dom.wts(args).minCoeff() > 0)))
+        {
+            // Convert the rule to a string
+            auto rstr = rule_to_str(qdeg, npts, orbits[i], args, outprec);
+
+#ifdef POLYQUAD_HAVE_MPI
+            post_rule(world, npts, rstr);
+#endif
+
+            if (rank == 0)
+                std::cout << rstr << std::flush;
+
+            // Update ub and continue
+            ub = npts;
+            goto start;
         }
+        // If too much time has elapsed go back to the start
+        else if (t.elapsed() > timeout)
+            goto start;
     }
 }
 
