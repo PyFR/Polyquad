@@ -29,6 +29,7 @@
 
 #ifdef POLYQUAD_HAVE_MPI
 # include <boost/mpi.hpp>
+# include <boost/serialization/utility.hpp>
 #endif
 #include <boost/program_options.hpp>
 
@@ -64,42 +65,42 @@ void post_npts(mpi::communicator& world, int npts)
     mpi::wait_all(std::begin(reqs), std::end(reqs));
 }
 
-int probe_npts(mpi::communicator& world)
+void probe_npts(mpi::communicator& world, int& ub)
 {
-    int rnpts = std::numeric_limits<int>::max();
-
-    // See if any other ranks have improved on npts
+    // See if any other ranks have improved on ub
     while (world.iprobe(mpi::any_source, npts_tag))
     {
         int i;
         world.recv(mpi::any_source, npts_tag, i);
 
-        if (i < rnpts)
-            rnpts = i;
+        if (i < ub)
+            ub = i;
     }
-
-    return rnpts;
 }
 
 void post_rule(mpi::communicator& world, int npts, const std::string& rstr)
 {
+    // Broadcast npts
+    post_npts(world, npts);
+
     // Send the rule to the root rank for printing
     if (world.rank() != 0)
-        world.send(0, rule_tag, rstr);
-
-    // Inform all other ranks of our progress
-    post_npts(world, npts);
+        world.send(0, rule_tag, make_pair(npts, rstr));
 }
 
-void probe_rules(mpi::communicator& world)
+void probe_rules(mpi::communicator& world, int& printed_npts)
 {
-    // Output any rules which have been forwarded to us
+    // Check if any rules have been forwarded to us
     while (world.iprobe(mpi::any_source, rule_tag))
     {
-        std::string rule;
+        std::pair<int, std::string> rule;
         world.recv(mpi::any_source, rule_tag, rule);
 
-        std::cout << rule << std::flush;
+        if (rule.first < printed_npts)
+        {
+            std::cout << rule.second << std::flush;
+            printed_npts = rule.first;
+        }
     }
 }
 #endif
@@ -172,6 +173,9 @@ process_iterate(const boost::program_options::variables_map& vm)
     const T tol = vm.count("tol") ? static_cast<T>(vm["tol"].as<double>())
                                   : Eigen::NumTraits<T>::dummy_precision();
     const int outprec = vm["output-prec"].as<int>();
+
+    // Number of points in the last rule we printed
+    int printed_npts = ub;
 
     // Random number generator
     std::mt19937 rand_eng((std::random_device()()));
@@ -268,10 +272,10 @@ start:
 #ifdef POLYQUAD_HAVE_MPI
         // If we are the root rank see if any rules need printing
         if (rank == 0)
-            probe_rules(world);
+            probe_rules(world, printed_npts);
 
         // See if another rank has made progress
-        ub = std::min(probe_npts(world), ub);
+        probe_npts(world, ub);
         if (npts >= ub)
             goto start;
 #endif
@@ -295,11 +299,15 @@ start:
             auto rstr = rule_to_str(qdeg, npts, orbits[i], args, outprec);
 
 #ifdef POLYQUAD_HAVE_MPI
+            // Inform other ranks of our progress
             post_rule(world, npts, rstr);
 #endif
 
             if (rank == 0)
+            {
                 std::cout << rstr << std::flush;
+                printed_npts = npts;
+            }
 
             // Update ub and continue
             ub = npts;
