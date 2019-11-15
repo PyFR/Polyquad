@@ -50,7 +50,8 @@ namespace mpi = boost::mpi;
 static const int npts_tag = 1;
 static const int rule_tag = 2;
 
-void post_npts(mpi::communicator& world, int npts)
+static void
+post_npts(mpi::communicator& world, int npts)
 {
     const int rank = world.rank();
     const int size = world.size();
@@ -65,7 +66,8 @@ void post_npts(mpi::communicator& world, int npts)
     mpi::wait_all(std::begin(reqs), std::end(reqs));
 }
 
-void probe_npts(mpi::communicator& world, int& ub)
+static void
+probe_npts(mpi::communicator& world, int& ub)
 {
     // See if any other ranks have improved on ub
     while (world.iprobe(mpi::any_source, npts_tag))
@@ -78,7 +80,8 @@ void probe_npts(mpi::communicator& world, int& ub)
     }
 }
 
-void post_rule(mpi::communicator& world, int npts, const std::string& rstr)
+static void
+post_rule(mpi::communicator& world, int npts, const std::string& rstr)
 {
     // Broadcast npts
     post_npts(world, npts);
@@ -88,7 +91,8 @@ void post_rule(mpi::communicator& world, int npts, const std::string& rstr)
         world.send(0, rule_tag, make_pair(npts, rstr));
 }
 
-void probe_rules(mpi::communicator& world, int& printed_npts)
+static void
+probe_rules(mpi::communicator& world, int& printed_npts)
 {
     // Check if any rules have been forwarded to us
     while (world.iprobe(mpi::any_source, rule_tag))
