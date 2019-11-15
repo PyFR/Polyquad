@@ -20,7 +20,7 @@
 #define POLYQUAD_SHAPES_PRI_HPP
 
 #include "shapes/base.hpp"
-#include "utils/jacobi_poly.hpp"
+#include "utils/ortho_poly.hpp"
 
 #include <Eigen/Dense>
 
@@ -248,13 +248,15 @@ PriDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
     const auto& q = pqr.col(1);
     const auto& r = pqr.col(2);
 
-    const auto& a = (q != 1).select(2*(1 + p)/(1 - q) - 1, 0);
+    const ArrayT a = (q != 1).select(2*(1 + p)/(1 - q) - 1, 0);
     const auto& b = q;
     const auto& c = r;
 
     T pow2ip1 = 0.5;
+
     ArrayT pow1mqi = ArrayT::Constant(p.size(), 1);
-    JacobiP<ArrayT> jpa(0, 0, a);
+
+    EvenLegendreP<ArrayT> jpa(a);
 
     for (int i = 0, off = 0; i <= this->qdeg(); i += 2)
     {
@@ -262,7 +264,7 @@ PriDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
 
         for (int j = i; j <= this->qdeg() - i; ++j)
         {
-            JacobiP<ArrayT> jpc(0, 0, c);
+            EvenLegendreP<ArrayT> jpc(c);
 
             for (int k = 0; k <= this->qdeg() - i - j; k += 2, ++off)
             {

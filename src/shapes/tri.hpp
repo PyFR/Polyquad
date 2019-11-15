@@ -20,7 +20,7 @@
 #define POLYQUAD_SHAPES_TRI_HPP
 
 #include "shapes/base.hpp"
-#include "utils/jacobi_poly.hpp"
+#include "utils/ortho_poly.hpp"
 
 #include <Eigen/Dense>
 
@@ -190,8 +190,10 @@ TriDomain<T>::eval_orthob_block(const D1 pq, D2 out) const
     const ArrayT b = q;
 
     T pow2ip1 = 0.5;
+
     ArrayT pow1mbi = ArrayT::Constant(p.size(), 1);
-    JacobiP<ArrayT> jpa(0, 0, a);
+
+    EvenLegendreP<ArrayT> jpa(a);
 
     for (int i = 0, off = 0; i <= this->qdeg(); i += 2)
     {

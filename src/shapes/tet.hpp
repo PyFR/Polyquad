@@ -20,7 +20,7 @@
 #define POLYQUAD_SHAPES_TET_HPP
 
 #include "shapes/base.hpp"
-#include "utils/jacobi_poly.hpp"
+#include "utils/ortho_poly.hpp"
 
 #include <Eigen/Dense>
 
@@ -248,15 +248,13 @@ TetDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
 {
     typedef Eigen::Array<T, D1::RowsAtCompileTime, 1> ArrayT;
 
-    const T one = 1;
-
     const auto& p = pqr.col(0);
     const auto& q = pqr.col(1);
     const auto& r = pqr.col(2);
 
     const ArrayT a = (q != -r).select(-2*(1 + p)/(q + r) - 1, 0);
     const ArrayT b = (r != 1).select(2*(1 + q)/(1 - r) - 1, 0);
-    const ArrayT c = r;
+    const auto& c = r;
 
     const T pow2m32 = exp2(T(-1.5));
     T pow2mi = 1;
@@ -264,7 +262,7 @@ TetDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
     ArrayT pow1mbi = ArrayT::Constant(p.size(), 1);
     ArrayT pow1mci = ArrayT::Constant(p.size(), 1);
 
-    JacobiP<ArrayT> jpa(0, 0, a);
+    EvenLegendreP<ArrayT> jpa(a);
 
     for (int i = 0, off = 0; i <= this->qdeg(); i += 2)
     {

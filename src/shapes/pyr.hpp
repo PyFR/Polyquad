@@ -20,7 +20,7 @@
 #define POLYQUAD_SHAPES_PYR_HPP
 
 #include "shapes/base.hpp"
-#include "utils/jacobi_poly.hpp"
+#include "utils/ortho_poly.hpp"
 
 #include <Eigen/Dense>
 
@@ -210,8 +210,8 @@ PyrDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
     const auto& q = pqr.col(1);
     const auto& r = pqr.col(2);
 
-    const auto& a = (r != 1).select(2*p/(1 - r), 0);
-    const auto& b = (r != 1).select(2*q/(1 - r), 0);
+    const ArrayT a = (r != 1).select(2*p/(1 - r), 0);
+    const ArrayT b = (r != 1).select(2*q/(1 - r), 0);
     const auto& c = r;
 
     const T half = 0.5;
@@ -220,13 +220,13 @@ PyrDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
 
     ArrayT pow1mci = ArrayT::Constant(p.size(), 1);
 
-    JacobiP<ArrayT> jpa(0, 0, a);
+    EvenLegendreP<ArrayT> jpa(a);
 
     for (int i = 0, off = 0; i <= this->qdeg(); i += 2)
     {
         T pow2mj = pow2mi;
         ArrayT pow1mcj = pow1mci;
-        JacobiP<ArrayT> jpb(0, 0, b);
+        EvenLegendreP<ArrayT> jpb(b);
 
         for (int j = i; j <= this->qdeg() - i; j += 2)
         {

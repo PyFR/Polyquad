@@ -20,7 +20,7 @@
 #define POLYQUAD_SHAPES_QUAD_HPP
 
 #include "shapes/base.hpp"
-#include "utils/jacobi_poly.hpp"
+#include "utils/ortho_poly.hpp"
 
 #include <Eigen/Dense>
 
@@ -193,16 +193,16 @@ QuadDomain<T>::eval_orthob_block(const D1 pq, D2 out) const
 {
     typedef Eigen::Array<T, D1::RowsAtCompileTime, 1> ArrayT;
 
-    const T half = 0.5;
-
     const auto& p = pq.col(0);
     const auto& q = pq.col(1);
 
-    JacobiP<ArrayT> jpp(0, 0, p);
+    const T half = 0.5;
+
+    EvenLegendreP<ArrayT> jpp(p);
 
     for (int i = 0, off = 0; i <= this->qdeg(); i += 2)
     {
-        JacobiP<ArrayT> jpq(0, 0, q);
+        EvenLegendreP<ArrayT> jpq(q);
 
         for (int j = i; j <= this->qdeg() - i; j += 2, ++off)
         {

@@ -16,8 +16,8 @@
     along with polyquad.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef POLYQUAD_UTILS_JACOBI_POLY_HPP
-#define POLYQUAD_UTILS_JACOBI_POLY_HPP
+#ifndef POLYQUAD_UTILS_ORTHO_POLY_HPP
+#define POLYQUAD_UTILS_ORTHO_POLY_HPP
 
 #include <Eigen/Dense>
 
@@ -77,6 +77,57 @@ JacobiP<ArrayT>::operator()(int n)
     return jm1_;
 }
 
+template<typename ArrayT>
+class EvenLegendreP
+{
+public:
+    typedef typename ArrayT::Scalar T;
+
+public:
+    EvenLegendreP(const ArrayT& x) : q_(0), x2_(x*x)
+    {}
+
+    ArrayT operator()(int n);
+
+private:
+    int q_;
+
+    const ArrayT x2_;
+    ArrayT jm2_, jm4_;
+};
+
+template<typename ArrayT>
+EIGEN_ALWAYS_INLINE ArrayT
+EvenLegendreP<ArrayT>::operator()(int n)
+{
+    assert(n % 2 == 0 && "Polynomial number must be even");
+    assert(q_ - 1 <= n && "Polynomials must be evaluated in sequence");
+
+    for (; q_ <= n; q_ += 2)
+    {
+        if (q_ == 0)
+            jm2_ = ArrayT::Constant(x2_.rows(), x2_.cols(), 1);
+        else if (q_ == 2)
+        {
+            jm4_ = ArrayT::Constant(x2_.rows(), x2_.cols(), 1);
+            jm2_ = (3*x2_ - 1) / 2;
+        }
+        else
+        {
+            T cdq = q_*(q_ - 1)*(2*q_ - 5);
+
+            T aq = T((2*q_ - 1)*(2*q_ - 3)*(2*q_ - 5)) / cdq;
+            T bq = T((2*q_ - 3)*(2*q_*q_ - 6*q_ + 3)) / cdq;
+            T cq = T((2*q_ - 1)*(q_ - 2)*(q_ - 3)) / cdq;
+
+            std::swap(jm2_, jm4_);
+            jm2_ = (aq*x2_ - bq)*jm4_ - cq*jm2_;
+        }
+    }
+
+    return jm2_;
 }
 
-#endif /* POLYQUAD_UTILS_JACOBI_POLY_HPP */
+}
+
+#endif /* POLYQUAD_UTILS_ORTHO_POLY_HPP */

@@ -20,7 +20,7 @@
 #define POLYQUAD_SHAPES_HEX_HPP
 
 #include "shapes/base.hpp"
-#include "utils/jacobi_poly.hpp"
+#include "utils/ortho_poly.hpp"
 
 #include <Eigen/Dense>
 
@@ -333,21 +333,21 @@ HexDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
 {
     typedef Eigen::Array<T, D1::RowsAtCompileTime, 1> ArrayT;
 
-    const T half = 0.5;
-
     const auto& p = pqr.col(0);
     const auto& q = pqr.col(1);
     const auto& r = pqr.col(2);
 
-    JacobiP<ArrayT> jpp(0, 0, p);
+    const T half = 0.5;
+
+    EvenLegendreP<ArrayT> jpp(p);
 
     for (int i = 0, off = 0; i <= this->qdeg(); i += 2)
     {
-        JacobiP<ArrayT> jpq(0, 0, q);
+        EvenLegendreP<ArrayT> jpq(q);
 
         for (int j = i; j <= this->qdeg() - i; j += 2)
         {
-            JacobiP<ArrayT> jpr(0, 0, r);
+            EvenLegendreP<ArrayT> jpr(r);
 
             for (int k = j; k <= this->qdeg() - i - j; k += 2, ++off)
             {
