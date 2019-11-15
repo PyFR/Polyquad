@@ -50,9 +50,8 @@ public:
 private:
     friend class BaseDomain<PriDomain<T>, T, 3, 6>;
 
-    constexpr int npts_for_orbit(int i) const;
-
-    constexpr int narg_for_orbit(int i) const;
+    static constexpr int npts_for_orbit[] = {1, 2, 3, 6, 6, 12};
+    static constexpr int narg_for_orbit[] = {0, 1, 1, 2, 2,  3};
 
     constexpr int nbfn_for_qdeg(int qdeg) const;
 
@@ -71,49 +70,6 @@ private:
                           const T& z) const
     { return {-p1 + p2 - p3, -p1 - p2 + p3, z}; }
 };
-
-template<typename T>
-inline constexpr int
-PriDomain<T>::npts_for_orbit(int i) const
-{
-    switch (i)
-    {
-        case 0:
-            return 1;
-        case 1:
-            return 2;
-        case 2:
-            return 3;
-        case 3:
-        case 4:
-            return 6;
-        case 5:
-            return 12;
-        default:
-            assert(0 && "Bad orbit"), abort();
-    }
-}
-
-template<typename T>
-inline constexpr int
-PriDomain<T>::narg_for_orbit(int i) const
-{
-    switch (i)
-    {
-        case 0:
-            return 0;
-        case 1:
-        case 2:
-            return 1;
-        case 3:
-        case 4:
-            return 2;
-        case 5:
-            return 3;
-        default:
-            assert(0 && "Bad orbit"), abort();
-    }
-}
 
 template<typename T>
 inline constexpr int

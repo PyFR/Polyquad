@@ -146,10 +146,7 @@ inline std::vector<typename BaseDomain<Derived, T, Ndim, Norbits>::VectorOrb>
 BaseDomain<Derived, T, Ndim, Norbits>::symm_decomps(int npts) const
 {
     const Derived& derived = static_cast<const Derived&>(*this);
-    VectorOrb coeffs;
-
-    for (int i = 0; i < Norbits; ++i)
-        coeffs(i) = derived.npts_for_orbit(i);
+    VectorOrb coeffs(derived.npts_for_orbit);
 
     std::vector<VectorOrb> solns;
     VectorOrb partsoln = VectorOrb::Zero();
@@ -171,7 +168,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::seed()
 
     for (int i = 0; i < Norbits; ++i)
     {
-        int ainc = derived.narg_for_orbit(i);
+        int ainc = derived.narg_for_orbit[i];
 
         for (int j = 0; j < orbits_(i); ++j, aoff += ainc)
             derived.seed_orbit(i, aoff, args_);
@@ -187,7 +184,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::clamp_args(const VectorXT& args) const
 
     for (int i = 0, aoff = 0; i < orbits_.rows(); ++i)
     {
-        int ainc = derived.narg_for_orbit(i);
+        int ainc = derived.narg_for_orbit[i];
 
         for (int j = 0; j < orbits_(i); ++j, aoff += ainc)
             derived.clamp_arg(i, aoff, nargs);
@@ -207,8 +204,8 @@ BaseDomain<Derived, T, Ndim, Norbits>::expand(
 
     for (int i = 0; i < Norbits; ++i)
     {
-        int ainc = derived.narg_for_orbit(i);
-        int pinc = derived.npts_for_orbit(i);
+        int ainc = derived.narg_for_orbit[i];
+        int pinc = derived.npts_for_orbit[i];
 
         for (int j = 0; j < orbits_(i); ++j, aoff += ainc, poff += pinc)
             derived.expand_orbit(i, aoff, poff, args, pts);
@@ -264,7 +261,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::expand_wts(
 
     for (int i = 0, poff = 0, woff = 0; i < Norbits; ++i)
     {
-        int pinc = derived.npts_for_orbit(i);
+        int pinc = derived.npts_for_orbit[i];
 
         for (int j = 0; j < orbits_(i); ++j, poff += pinc, ++woff)
             wtsout.segment(poff, pinc).fill(wargs(woff));
@@ -331,7 +328,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::wts(
 
     for (int i = 0, poff = 0, coff = 0; i < Norbits; ++i)
     {
-        int pinc = derived.npts_for_orbit(i);
+        int pinc = derived.npts_for_orbit[i];
 
         for (int j = 0; j < orbits_(i); ++j, ++coff, poff += pinc)
             for (int l = 0; l < A_.rows(); ++l)
@@ -358,7 +355,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::npts() const
     int s = 0;
 
     for (int i = 0; i < Norbits; ++i)
-        s += orbits_(i)*derived.npts_for_orbit(i);
+        s += orbits_(i)*derived.npts_for_orbit[i];
 
     return s;
 }
@@ -371,7 +368,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::ndof() const
     int s = 0;
 
     for (int i = 0; i < Norbits; ++i)
-        s += orbits_(i)*derived.narg_for_orbit(i);
+        s += orbits_(i)*derived.narg_for_orbit[i];
 
     return s;
 }

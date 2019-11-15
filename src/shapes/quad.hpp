@@ -50,9 +50,8 @@ public:
 private:
     friend class BaseDomain<QuadDomain<T>, T, 2, 4>;
 
-    constexpr int npts_for_orbit(int i) const;
-
-    constexpr int narg_for_orbit(int i) const;
+    static constexpr int npts_for_orbit[] = {1, 4, 4, 8};
+    static constexpr int narg_for_orbit[] = {0, 1, 1, 2};
 
     constexpr int nbfn_for_qdeg(int qdeg) const;
 
@@ -67,42 +66,6 @@ private:
 
     void clamp_arg(int i, int aoff, VectorXT& args) const;
 };
-
-template<typename T>
-inline constexpr int
-QuadDomain<T>::npts_for_orbit(int i) const
-{
-    switch (i)
-    {
-        case 0:
-            return 1;
-        case 1:
-        case 2:
-            return 4;
-        case 3:
-            return 8;
-        default:
-            assert(0 && "Bad orbit"), abort();
-    }
-}
-
-template<typename T>
-inline constexpr int
-QuadDomain<T>::narg_for_orbit(int i) const
-{
-    switch (i)
-    {
-        case 0:
-            return 0;
-        case 1:
-        case 2:
-            return 1;
-        case 3:
-            return 2;
-        default:
-            assert(0 && "Bad orbit"), abort();
-    }
-}
 
 template<typename T>
 inline constexpr int

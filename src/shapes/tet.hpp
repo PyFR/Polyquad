@@ -50,9 +50,8 @@ public:
 private:
     friend class BaseDomain<TetDomain<T>, T, 3, 5>;
 
-    constexpr int npts_for_orbit(int i) const;
-
-    constexpr int narg_for_orbit(int i) const;
+    static constexpr int npts_for_orbit[] = {1, 4, 6, 12, 24};
+    static constexpr int narg_for_orbit[] = {0, 1, 1,  2,  3};
 
     constexpr int nbfn_for_qdeg(int qdeg) const;
 
@@ -71,47 +70,6 @@ private:
                           const T& p4) const
     { return {-p4 - p3 + p2 - p1, -p4 + p3 - p2 - p1, p4 - p3 - p2 - p1}; }
 };
-
-template<typename T>
-inline constexpr int
-TetDomain<T>::npts_for_orbit(int i) const
-{
-    switch (i)
-    {
-        case 0:
-            return 1;
-        case 1:
-            return 4;
-        case 2:
-            return 6;
-        case 3:
-            return 12;
-        case 4:
-            return 24;
-        default:
-            assert(0 && "Bad orbit"), abort();
-    }
-}
-
-template<typename T>
-inline constexpr int
-TetDomain<T>::narg_for_orbit(int i) const
-{
-    switch (i)
-    {
-        case 0:
-            return 0;
-        case 1:
-        case 2:
-            return 1;
-        case 3:
-            return 2;
-        case 4:
-            return 3;
-        default:
-            assert(0 && "Bad orbit"), abort();
-    }
-}
 
 template<typename T>
 inline constexpr int
