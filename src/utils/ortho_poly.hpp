@@ -101,7 +101,7 @@ EIGEN_ALWAYS_INLINE ArrayT
 EvenLegendreP<ArrayT>::operator()(int n)
 {
     assert(n % 2 == 0 && "Polynomial number must be even");
-    assert(q_ - 1 <= n && "Polynomials must be evaluated in sequence");
+    assert(q_ - 2 <= n && "Polynomials must be evaluated in sequence");
 
     for (; q_ <= n; q_ += 2)
     {
