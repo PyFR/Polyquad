@@ -182,7 +182,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::clamp_args(const VectorXT& args) const
     const Derived& derived = static_cast<const Derived&>(*this);
     VectorXT nargs = args;
 
-    for (int i = 0, aoff = 0; i < orbits_.rows(); ++i)
+    for (int i = 0, aoff = 0; i < Norbits; ++i)
     {
         int ainc = derived.narg_for_orbit[i];
 
