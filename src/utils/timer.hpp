@@ -32,10 +32,13 @@ public:
     double elapsed() const
     { return now() - start_; }
 
+    void reset()
+    { start_ = now(); }
+
 private:
     static double now();
 
-    const double start_;
+    double start_;
 };
 
 inline double

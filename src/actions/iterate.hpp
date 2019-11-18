@@ -171,7 +171,6 @@ process_iterate(const boost::program_options::variables_map& vm)
 
     const int nprelim = 5;
     const double lambda = 0.1;
-    const double timeout = 200;
 
     // Floating point tolerance and output precision
     const T tol = vm.count("tol") ? static_cast<T>(vm["tol"].as<double>())
@@ -221,6 +220,9 @@ start:
     const auto& orbits = nptsorbits[npts].first;
     auto& norms = nptsorbits[npts].second;
 
+    // Start the timer
+    Timer t;
+
     // Update the norms associated with each orbit
     for (int i = 0; i < orbits.size(); ++i)
     {
@@ -266,8 +268,11 @@ start:
     // Limit ourselves to the top ten orbits
     const int tryorbs = std::min<int>(10, orbits.size());
 
-    // Start the timer
-    Timer t;
+    // Record how long we spent in the preliminary phase
+    const double pretime = t.elapsed();
+
+    // Reset the time for the main phase
+    t.reset();
 
     for (int j = 0; ; j = (j + 1) % tryorbs)
     {
@@ -318,7 +323,7 @@ start:
             goto start;
         }
         // If too much time has elapsed go back to the start
-        else if (t.elapsed() > timeout)
+        else if (t.elapsed() > 100*pretime)
             goto start;
     }
 }
