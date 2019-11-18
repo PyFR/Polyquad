@@ -65,6 +65,8 @@ private:
 
     void clamp_arg(int i, int aoff, VectorXT& args) const;
 
+    void sort_arg(int i, int aoff, VectorXT& args) const;
+
 private:
     Vector3T bary_to_cart(const T& p1, const T& p2, const T& p3,
                           const T& p4) const
@@ -278,6 +280,21 @@ TetDomain<T>::clamp_arg(int i, int aoff, VectorXT& args) const
             break;
         default:
             assert(0 && "Bad orbit"), abort();
+    }
+}
+
+template<typename T>
+inline void
+TetDomain<T>::sort_arg(int i, int aoff, VectorXT& args) const
+{
+    if (i == 4)
+    {
+        if (args(aoff + 2) < args(aoff + 0))
+            std::swap(args(aoff + 0), args(aoff + 2));
+        if (args(aoff + 1) < args(aoff + 0))
+            std::swap(args(aoff + 0), args(aoff + 1));
+        if (args(aoff + 2) < args(aoff + 1))
+            std::swap(args(aoff + 2), args(aoff + 1));
     }
 }
 

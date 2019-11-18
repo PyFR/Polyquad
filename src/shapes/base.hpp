@@ -97,6 +97,8 @@ protected:
     { return std::uniform_real_distribution<double>(a, b)(rand_eng_); }
 
 private:
+    void sort_args(VectorXT& args) const;
+
     void symm_decomps_recurse(VectorOrb coeffs,
                               int sum,
                               VectorOrb& partsoln,
@@ -308,6 +310,9 @@ BaseDomain<Derived, T, Ndim, Norbits>::minimise(int maxfev)
     // Clamp the arguments to ensure all points are inside the domain
     args_ = derived.clamp_args(args_);
 
+    // Sort these clamped arguments into a canonical order
+    derived.sort_args(args_);
+
     // Compute the residual of these clamped points
     VectorXT resid(derived.nbfn());
     derived.wts(args_, &resid);
@@ -371,6 +376,50 @@ BaseDomain<Derived, T, Ndim, Norbits>::ndof() const
         s += orbits_(i)*derived.narg_for_orbit[i];
 
     return s;
+}
+
+template<typename Derived, typename T, int Ndim, int Norbits>
+inline void
+BaseDomain<Derived, T, Ndim, Norbits>::sort_args(VectorXT& args) const
+{
+    const Derived& derived = static_cast<const Derived&>(*this);
+    int aoff = 0;
+
+    for (int i = 0; i < Norbits; ++i)
+    {
+        int nobi = orbits_(i);
+        int narg = derived.narg_for_orbit[i];
+
+        // Skip orbits which have no arguments/are not present
+        if (!narg || !nobi)
+            continue;
+
+        // Sort the parameters inside of each orbit
+        for (int j = 0; j < nobi; ++j)
+            derived.sort_arg(i, aoff + j*narg, args);
+
+        // Map the arguments for the orbits of this type to a matrix
+        Eigen::Map<MatrixXT> margs(args.data() + aoff, narg, nobi);
+
+        // Now, reorder the orbits themselves
+        for (int j = 0; j < nobi - 1; ++j)
+        {
+            int mix = j;
+
+            for (int k = j + 1; k < nobi; ++k)
+            {
+                auto ck = margs.col(k).data(), cm = margs.col(mix).data();
+
+                if (std::lexicographical_compare(ck, ck + narg, cm, cm + narg))
+                    mix = k;
+            }
+
+            margs.col(mix).swap(margs.col(j));
+        }
+
+        // Increment the offset in the argument vector
+        aoff += narg*nobi;
+    }
 }
 
 template<typename Derived, typename T, int Ndim, int Norbits>

@@ -41,40 +41,13 @@ namespace polyquad {
 
 namespace mpi = boost::mpi;
 
-template<typename Derived>
+template<typename VT, typename T>
 bool
-compare_pts(const Eigen::MatrixBase<Derived>& a,
-            const Eigen::MatrixBase<Derived>& b,
-            const typename Eigen::MatrixBase<Derived>::Scalar& tol)
+seen_rule(const std::vector<VT>& rules, const VT& newr, const T& tol)
 {
-    const auto& br = b.rowwise();
-
-    for (int i = 0; i < a.rows(); ++i)
-        if ((br - a.row(i)).rowwise().squaredNorm().minCoeff() > tol)
-            return false;
-
-    return true;
-}
-
-template<template<typename> class Domain, typename T>
-bool
-seen_rule(const Domain<T>& dom,
-          const std::vector<typename Domain<T>::VectorXT>& rules,
-          const typename Domain<T>::VectorXT& newr,
-          const T& tol)
-{
-    typename Domain<T>::MatrixPtsT pts_a(dom.npts(), dom.ndim());
-    typename Domain<T>::MatrixPtsT pts_b(dom.npts(), dom.ndim());
-
-    dom.expand(newr, pts_a);
-
     for (const auto& ri : rules)
-    {
-        dom.expand(ri, pts_b);
-
-        if (compare_pts(pts_a, pts_b, tol))
+        if ((newr - ri).squaredNorm() < tol)
             return true;
-    }
 
     return false;
 }
@@ -203,7 +176,7 @@ process_find(const boost::program_options::variables_map& vm)
             // See if the minimisation was successful
             if (norm < tol
              && (!poswts || (dom.wts(args).minCoeff() > 0))
-             && !seen_rule(dom, rules[i], args, tol))
+             && !seen_rule(rules[i], args, tol))
             {
                 rules[i].push_back(args);
 
@@ -222,7 +195,7 @@ process_find(const boost::program_options::variables_map& vm)
             // Merge the rules from other ranks into our vector
             for (auto it = std::cbegin(gr) + 1; it != std::cend(gr); ++it)
                 for (const auto& r : *it)
-                    if (!seen_rule(dom, rules[i], r, tol))
+                    if (!seen_rule(rules[i], r, tol))
                         rules[i].push_back(r);
         }
         else

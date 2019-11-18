@@ -65,6 +65,8 @@ private:
 
     void clamp_arg(int i, int aoff, VectorXT& args) const;
 
+    void sort_arg(int i, int aoff, VectorXT& args) const;
+
 private:
     Vector3T bary_to_cart(const T& p1, const T& p2, const T& p3,
                           const T& z) const
@@ -265,6 +267,14 @@ PriDomain<T>::clamp_arg(int i, int aoff, VectorXT& args) const
         default:
             assert(0 && "Bad orbit"), abort();
     }
+}
+
+template<typename T>
+inline void
+PriDomain<T>::sort_arg(int i, int aoff, VectorXT& args) const
+{
+    if ((i == 4 || i == 5) && args(aoff + 1) < args(aoff + 0))
+        std::swap(args(aoff + 0), args(aoff + 1));
 }
 
 }

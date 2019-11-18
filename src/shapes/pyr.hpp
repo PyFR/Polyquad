@@ -65,6 +65,8 @@ private:
     void eval_orthob_block(const D1 pqr, D2 out) const;
 
     void clamp_arg(int i, int aoff, VectorXT& args) const;
+
+    void sort_arg(int i, int aoff, VectorXT& args) const;
 };
 
 template<typename T>
@@ -236,6 +238,14 @@ PyrDomain<T>::clamp_arg(int i, int aoff, VectorXT& args) const
         default:
             assert(0 && "Bad orbit"), abort();
     }
+}
+
+template<typename T>
+inline void
+PyrDomain<T>::sort_arg(int i, int aoff, VectorXT& args) const
+{
+    if (i == 3 && args(aoff + 1) < args(aoff + 0))
+        std::swap(args(aoff + 0), args(aoff + 1));
 }
 
 }

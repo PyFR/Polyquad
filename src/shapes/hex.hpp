@@ -65,6 +65,8 @@ private:
     void eval_orthob_block(const D1 pqr, D2 out) const;
 
     void clamp_arg(int i, int aoff, VectorXT& args) const;
+
+    void sort_arg(int i, int aoff, VectorXT& args) const;
 };
 
 template<typename T>
@@ -337,6 +339,23 @@ HexDomain<T>::clamp_arg(int i, int aoff, VectorXT& args) const
             break;
         default:
             assert(0 && "Bad orbit"), abort();
+    }
+}
+
+template<typename T>
+inline void
+HexDomain<T>::sort_arg(int i, int aoff, VectorXT& args) const
+{
+    if (i == 4 && args(aoff + 1) < args(aoff + 0))
+        std::swap(args(aoff + 0), args(aoff + 1));
+    else if (i == 6)
+    {
+        if (args(aoff + 2) < args(aoff + 0))
+            std::swap(args(aoff + 0), args(aoff + 2));
+        if (args(aoff + 1) < args(aoff + 0))
+            std::swap(args(aoff + 0), args(aoff + 1));
+        if (args(aoff + 2) < args(aoff + 1))
+            std::swap(args(aoff + 2), args(aoff + 1));
     }
 }
 
