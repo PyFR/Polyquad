@@ -83,12 +83,12 @@ probe_npts(mpi::communicator& world, int& ub)
 static void
 post_rule(mpi::communicator& world, int npts, const std::string& rstr)
 {
-    // Broadcast npts
-    post_npts(world, npts);
-
     // Send the rule to the root rank for printing
     if (world.rank() != 0)
         world.send(0, rule_tag, make_pair(npts, rstr));
+
+    // Broadcast npts
+    post_npts(world, npts);
 }
 
 static void
