@@ -126,7 +126,7 @@ process_find(const boost::program_options::variables_map& vm)
                 std::tie(norm, args) = dom.minimise(maxfev);
 
                 // Save the norm
-                norms[i] = std::min(norm, norms[i]);
+                norms[i] = std::min(static_cast<double>(norm), norms[i]);
             };
         }
 

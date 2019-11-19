@@ -237,7 +237,7 @@ start:
             std::tie(norm, args) = dom.minimise(maxfev);
 
             // Update the norm
-            norms[i] = std::min(norm, norms[i]);
+            norms[i] = std::min(static_cast<double>(norm), norms[i]);
 
             // If we're lucky we may have found a rule
             if (norm < tol && (!poswts || (dom.wts(args).minCoeff() > 0)))
@@ -299,7 +299,7 @@ start:
         std::tie(norm, args) = dom.minimise(maxfev);
 
         // Update the norm for this orbit
-        norms[i] = std::min(norm, norms[i]);
+        norms[i] = std::min(static_cast<double>(norm), norms[i]);
 
         // See if a rule has been found
         if (norm < tol && (!poswts || (dom.wts(args).minCoeff() > 0)))
