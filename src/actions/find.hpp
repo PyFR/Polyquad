@@ -91,9 +91,6 @@ process_find(const boost::program_options::variables_map& vm)
                                   : Eigen::NumTraits<T>::dummy_precision();
     const int outprec = vm["output-prec"].as<int>();
 
-    T norm;
-    VectorXT args;
-
     // Decompose npts into symmetric orbital configurations
     auto orbits = dom.symm_decomps(npts);
 
@@ -115,7 +112,7 @@ process_find(const boost::program_options::variables_map& vm)
 
         for (int i = 0; i < orbits.size(); ++i)
         {
-            dom.configure(qdeg, orbits[i]);
+            dom.configure(qdeg, poswts, orbits[i]);
 
             for (int j = 0; j < nprelim; ++j)
             {
@@ -123,7 +120,7 @@ process_find(const boost::program_options::variables_map& vm)
                 dom.seed();
 
                 // Attempt to minimise
-                std::tie(norm, args) = dom.minimise(maxfev);
+                auto [norm, args] = dom.minimise(maxfev);
 
                 // Save the norm
                 norms[i] = std::min(static_cast<double>(norm), norms[i]);
@@ -157,7 +154,7 @@ process_find(const boost::program_options::variables_map& vm)
         const int i = orbitseq[j];
 
         // Configure the domain for this orbit
-        dom.configure(qdeg, orbits[i]);
+        dom.configure(qdeg, poswts, orbits[i]);
 
         if (verbose && rank == 0)
             std::cerr << "Decomposition " << (i + 1) << "/"
@@ -171,7 +168,7 @@ process_find(const boost::program_options::variables_map& vm)
             dom.seed();
 
             // Attempt to minimise
-            std::tie(norm, args) = dom.minimise(maxfev);
+            auto [norm, args] = dom.minimise(maxfev);
 
             // See if the minimisation was successful
             if (norm < tol

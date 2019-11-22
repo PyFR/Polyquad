@@ -71,7 +71,7 @@ process_eval(const boost::program_options::variables_map& vm)
             ifs >> orb;
 
             // Configure the domain
-            dom.configure(qdeg, orb);
+            dom.configure(qdeg, false, orb);
 
             // Now read in the arguments (i.e, the rule)
             VectorXT args = VectorXT::Zero(dom.ndof());

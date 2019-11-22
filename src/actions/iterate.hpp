@@ -198,8 +198,6 @@ process_iterate(const boost::program_options::variables_map& vm)
     }
 
     int npts;
-    T norm;
-    VectorXT args;
 
     // Main search loop
 start:
@@ -226,7 +224,7 @@ start:
     // Update the norms associated with each orbit
     for (int i = 0; i < orbits.size(); ++i)
     {
-        dom.configure(qdeg, orbits[i]);
+        dom.configure(qdeg, poswts, orbits[i]);
 
         for (int j = 0; j < nprelim; ++j)
         {
@@ -234,13 +232,13 @@ start:
             dom.seed();
 
             // Attempt to minimise
-            std::tie(norm, args) = dom.minimise(maxfev);
+            auto [norm, args] = dom.minimise(maxfev);
 
             // Update the norm
             norms[i] = std::min(static_cast<double>(norm), norms[i]);
 
             // If we're lucky we may have found a rule
-            if (norm < tol && (!poswts || (dom.wts(args).minCoeff() > 0)))
+            if (norm < tol)
             {
                 // Convert the rule to a string
                 auto rstr = rule_to_str(qdeg, npts, orbits[i], args, outprec);
@@ -290,19 +288,19 @@ start:
 #endif
 
         // Configure the domain for this orbit
-        dom.configure(qdeg, orbits[i]);
+        dom.configure(qdeg, poswts, orbits[i]);
 
         // Seed the orbit
         dom.seed();
 
         // Attempt to minimise
-        std::tie(norm, args) = dom.minimise(maxfev);
+        auto [norm, args] = dom.minimise(maxfev);
 
         // Update the norm for this orbit
         norms[i] = std::min(static_cast<double>(norm), norms[i]);
 
         // See if a rule has been found
-        if (norm < tol && (!poswts || (dom.wts(args).minCoeff() > 0)))
+        if (norm < tol)
         {
             // Convert the rule to a string
             auto rstr = rule_to_str(qdeg, npts, orbits[i], args, outprec);

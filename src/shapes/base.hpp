@@ -52,7 +52,7 @@ public:
         , rand_eng_(std::random_device()())
     {}
 
-    void configure(int qdeg, const VectorOrb& orbits);
+    void configure(int qdeg, bool poswts, const VectorOrb& orbits);
 
     std::vector<VectorOrb> symm_decomps(int npts) const;
 
@@ -105,6 +105,7 @@ private:
                               std::vector<VectorOrb>& solns) const;
 
     int qdeg_;
+    int poswts_;
     const T f0_;
 
     VectorOrb orbits_;
@@ -124,11 +125,13 @@ template<typename Derived, typename T, int Ndim, int Norbits>
 inline void
 BaseDomain<Derived, T, Ndim, Norbits>::configure(
         int qdeg,
+        bool poswts,
         const VectorOrb& orbits)
 {
     using Eigen::HouseholderQR;
 
     qdeg_ = qdeg;
+    poswts_ = poswts;
     orbits_ = orbits;
 
     // Pre-allocate some scratch space
@@ -277,15 +280,20 @@ BaseDomain<Derived, T, Ndim, Norbits>::minimise(int maxfev)
 {
     struct min_functor : Eigen::DenseFunctor<T>
     {
-        min_functor(Derived& dom)
-            : Eigen::DenseFunctor<T>(dom.ndof(), dom.nbfn() + 1)
+        min_functor(Derived& dom, bool poswts)
+            : Eigen::DenseFunctor<T>(dom.ndof(), dom.nbfn() + 1 + poswts)
             , dom_(dom)
+            , poswts_(poswts)
         {}
 
         int operator()(const VectorXT& x, VectorXT& f) const
         {
             // Compute the residual
-            dom_.wts(x, &f);
+            auto wts = dom_.wts(x, &f);
+
+            // Handle the requirements for positive weights
+            if (poswts_)
+                f(f.size() - 2) = (wts.array() < 0).select(wts, 0).sum();
 
             // Account for invalid arguments
             f(f.size() - 1) = (x - dom_.clamp_args(x)).norm();
@@ -294,12 +302,13 @@ BaseDomain<Derived, T, Ndim, Norbits>::minimise(int maxfev)
         }
 
         Derived& dom_;
+        const bool poswts_;
     };
 
     Derived& derived = static_cast<Derived&>(*this);
 
     typedef Eigen::NumericalDiff<min_functor> min_functor_ndiff;
-    min_functor f(derived);
+    min_functor f(derived, poswts_);
     min_functor_ndiff fd(f);
 
     // Perform the minimisation
