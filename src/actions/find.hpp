@@ -35,11 +35,10 @@
 #include <Eigen/Dense>
 
 #include <iostream>
+#include <numeric>
 #include <vector>
 
 namespace polyquad {
-
-namespace mpi = boost::mpi;
 
 template<typename VT, typename T>
 bool
@@ -62,6 +61,8 @@ process_find(const boost::program_options::variables_map& vm)
     typedef typename Domain<T>::VectorOrb VectorOrb;
 
 #ifdef POLYQUAD_HAVE_MPI
+    namespace mpi = boost::mpi;
+
     mpi::environment env;
     mpi::communicator world;
 
@@ -171,9 +172,7 @@ process_find(const boost::program_options::variables_map& vm)
             auto [norm, args] = dom.minimise(maxfev);
 
             // See if the minimisation was successful
-            if (norm < tol
-             && (!poswts || (dom.wts(args).minCoeff() > 0))
-             && !seen_rule(rules[i], args, tol))
+            if (norm < tol && !seen_rule(rules[i], args, tol))
             {
                 rules[i].push_back(args);
 
