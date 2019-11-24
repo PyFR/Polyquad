@@ -166,18 +166,11 @@ inline void
 BaseDomain<Derived, T, Ndim, Norbits>::seed()
 {
     Derived& derived = static_cast<Derived&>(*this);
-
     args_ = VectorXT::Zero(ndof());
 
-    int aoff = 0;
-
-    for (int i = 0; i < Norbits; ++i)
-    {
-        int ainc = derived.narg_for_orbit[i];
-
-        for (int j = 0; j < orbits_(i); ++j, aoff += ainc)
+    for (int i = 0, aoff = 0; i < Norbits; ++i)
+        for (int j = 0; j < orbits_(i); ++j, aoff += derived.narg_for_orbit[i])
             derived.seed_orbit(i, aoff, args_);
-    }
 }
 
 template<typename Derived, typename T, int Ndim, int Norbits>
@@ -188,12 +181,8 @@ BaseDomain<Derived, T, Ndim, Norbits>::clamp_args(const VectorXT& args) const
     VectorXT nargs = args;
 
     for (int i = 0, aoff = 0; i < Norbits; ++i)
-    {
-        int ainc = derived.narg_for_orbit[i];
-
-        for (int j = 0; j < orbits_(i); ++j, aoff += ainc)
+        for (int j = 0; j < orbits_(i); ++j, aoff += derived.narg_for_orbit[i])
             derived.clamp_arg(i, aoff, nargs);
-    }
 
     return nargs;
 }
