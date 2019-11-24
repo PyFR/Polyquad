@@ -257,6 +257,8 @@ template<typename T>
 inline void
 HexDomain<T>::seed_orbit(int i, int aoff, VectorXT& args)
 {
+    auto seed = [&]() { return sqrt(1 - pow(this->rand(), 2)); };
+
     switch (i)
     {
         case 0:
@@ -264,17 +266,17 @@ HexDomain<T>::seed_orbit(int i, int aoff, VectorXT& args)
         case 1:
         case 2:
         case 3:
-            args(aoff) = this->rand(0.0, 1.0);
+            args(aoff) = seed();
             break;
         case 4:
         case 5:
-            args(aoff + 0) = this->rand(0.0, 1.0);
-            args(aoff + 1) = this->rand(0.0, 1.0);
+            args(aoff + 0) = seed();
+            args(aoff + 1) = seed();
             break;
         case 6:
-            args(aoff + 0) = this->rand(0.0, 1.0);
-            args(aoff + 1) = this->rand(0.0, 1.0);
-            args(aoff + 2) = this->rand(0.0, 1.0);
+            args(aoff + 0) = seed();
+            args(aoff + 1) = seed();
+            args(aoff + 2) = seed();
             break;
         default:
             assert(0 && "Bad orbit"), abort();

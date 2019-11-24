@@ -93,7 +93,7 @@ public:
     int ndof() const;
 
 protected:
-    double rand(double a, double b)
+    double rand(double a=0, double b=1)
     { return std::uniform_real_distribution<double>(a, b)(rand_eng_); }
 
 private:

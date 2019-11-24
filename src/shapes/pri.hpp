@@ -167,28 +167,33 @@ template<typename T>
 inline void
 PriDomain<T>::seed_orbit(int i, int aoff, VectorXT& args)
 {
+    auto seeda = [&]() { return this->rand(0, 0.5); };
+    auto seedb = [&]() { return this->rand(0, 1.0 / 3.0); };
+    auto seedc = [&]() { return sqrt(1 - pow(this->rand(), 2)); };
+
+
     switch (i)
     {
         case 0:
             break;
         case 1:
-            args(aoff) = this->rand(0.0, 1.0);
+            args(aoff) = seedc();
             break;
         case 2:
-            args(aoff) = this->rand(0.0, 0.5);
+            args(aoff) = seeda();
             break;
         case 3:
-            args(aoff + 0) = this->rand(0.0, 0.5);
-            args(aoff + 1) = this->rand(0.0, 1.0);
+            args(aoff + 0) = seeda();
+            args(aoff + 1) = seedc();
             break;
         case 4:
-            args(aoff + 0) = this->rand(0.0, 1.0 / 3.0);
-            args(aoff + 1) = this->rand(0.0, 1.0 / 3.0);
+            args(aoff + 0) = seedb();
+            args(aoff + 1) = seedb();
             break;
         case 5:
-            args(aoff + 0) = this->rand(0.0, 1.0 / 3.0);
-            args(aoff + 1) = this->rand(0.0, 1.0 / 3.0);
-            args(aoff + 2) = this->rand(0.0, 1.0);
+            args(aoff + 0) = seedb();
+            args(aoff + 1) = seedb();
+            args(aoff + 2) = seedc();
             break;
         default:
             assert(0 && "Bad orbit"), abort();
@@ -282,7 +287,7 @@ PriDomain<T>::sort_arg(int i, int aoff, VectorXT& args) const
             1 - args(aoff + 0) - args(aoff + 1)
         };
         std::sort(baryc, baryc + 3);
-        std::copy(args.data() + aoff, args.data() + aoff + 2, baryc);
+        std::copy(baryc, baryc + 2, args.data() + aoff);
     }
 }
 

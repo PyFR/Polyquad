@@ -138,24 +138,25 @@ template<typename T>
 inline void
 PyrDomain<T>::seed_orbit(int i, int aoff, VectorXT& args)
 {
+    double c = 1 - 2*sqrt(1 - pow(this->rand(), 2));
+    auto seeda = [&]() { return (1 - c)/2*sqrt(1 - pow(this->rand(), 2)); };
+
     switch (i)
     {
         case 0:
-            args(aoff + 0) = this->rand(-1.0, 1.0);
+            args(aoff + 0) = c;
             break;
         case 1:
         case 2:
         {
-            double b = this->rand(-1.0, 1.0);
-            args(aoff + 0) = this->rand(0.0, (1.0 - b)/2);
-            args(aoff + 1) = b;
+            args(aoff + 0) = seeda();
+            args(aoff + 1) = c;
             break;
         }
         case 3:
         {
-            double c = this->rand(-1.0, 1.0);
-            args(aoff + 0) = this->rand(0.0, (1.0 - c)/2);
-            args(aoff + 1) = this->rand(0.0, (1.0 - c)/2);
+            args(aoff + 0) = seeda();
+            args(aoff + 1) = seeda();
             args(aoff + 2) = c;
             break;
         }

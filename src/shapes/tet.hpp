@@ -185,7 +185,7 @@ TetDomain<T>::seed_orbit(int i, int aoff, VectorXT& args)
             args(aoff) = this->rand(0.0, 1.0 / 3.0);
             break;
         case 2:
-            args(aoff) = this->rand(0.0, 0.5);
+            args(aoff) = this->rand(0.0, 0.25);
             break;
         case 3:
             args(aoff + 0) = this->rand(0.0, 1.0 / 3.0);
@@ -288,7 +288,7 @@ inline void
 TetDomain<T>::sort_arg(int i, int aoff, VectorXT& args) const
 {
     if (i == 2)
-        args(aoff + 0) = std::min(args(aoff + 0), 0.5 - args(aoff + 0));
+        args(aoff) = std::min(args(aoff), 0.5 - args(aoff));
     else if (i == 4)
     {
         T baryc[] =
@@ -299,7 +299,7 @@ TetDomain<T>::sort_arg(int i, int aoff, VectorXT& args) const
             1 - args(aoff + 0) - args(aoff + 1) - args(aoff + 2)
         };
         std::sort(baryc, baryc + 4);
-        std::copy(args.data() + aoff, args.data() + aoff + 3, baryc);
+        std::copy(baryc, baryc + 3, args.data() + aoff);
     }
 }
 

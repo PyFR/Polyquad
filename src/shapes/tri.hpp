@@ -211,7 +211,7 @@ TriDomain<T>::sort_arg(int i, int aoff, VectorXT& args) const
             1 - args(aoff + 0) - args(aoff + 1)
         };
         std::sort(baryc, baryc + 3);
-        std::copy(args.data() + aoff, args.data() + aoff + 2, baryc);
+        std::copy(baryc, baryc + 2, args.data() + aoff);
     }
 }
 
