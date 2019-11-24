@@ -96,6 +96,8 @@ protected:
     double rand(double a=0, double b=1)
     { return std::uniform_real_distribution<double>(a, b)(rand_eng_); }
 
+    double rand(double a, double b, const int* wts, int nwts);
+
 private:
     void sort_args(VectorXT& args) const;
 
@@ -374,6 +376,25 @@ BaseDomain<Derived, T, Ndim, Norbits>::ndof() const
         s += orbits_(i)*derived.narg_for_orbit[i];
 
     return s;
+}
+
+template<typename Derived, typename T, int Ndim, int Norbits>
+inline double
+BaseDomain<Derived, T, Ndim, Norbits>::rand(
+    double a,
+    double b,
+    const int* wts,
+    int nwts)
+{
+    const int sum = std::accumulate(wts, wts + nwts, 0);
+    const double step = (b - a) / nwts;
+
+    int bin = std::uniform_int_distribution(0, sum - 1)(rand_eng_);
+    for (int i = 0; i < nwts; bin -= wts[i++])
+        if (bin < wts[i])
+            return rand(a + i*step, a + (i + 1)*step);
+
+    abort();
 }
 
 template<typename Derived, typename T, int Ndim, int Norbits>
