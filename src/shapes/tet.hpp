@@ -287,14 +287,19 @@ template<typename T>
 inline void
 TetDomain<T>::sort_arg(int i, int aoff, VectorXT& args) const
 {
-    if (i == 4)
+    if (i == 2)
+        args(aoff + 0) = std::min(args(aoff + 0), 0.5 - args(aoff + 0));
+    else if (i == 4)
     {
-        if (args(aoff + 2) < args(aoff + 0))
-            std::swap(args(aoff + 0), args(aoff + 2));
-        if (args(aoff + 1) < args(aoff + 0))
-            std::swap(args(aoff + 0), args(aoff + 1));
-        if (args(aoff + 2) < args(aoff + 1))
-            std::swap(args(aoff + 2), args(aoff + 1));
+        T baryc[] =
+        {
+            args(aoff + 0),
+            args(aoff + 1),
+            args(aoff + 2),
+            1 - args(aoff + 0) - args(aoff + 1) - args(aoff + 2)
+        };
+        std::sort(baryc, baryc + 4);
+        std::copy(args.data() + aoff, args.data() + aoff + 3, baryc);
     }
 }
 

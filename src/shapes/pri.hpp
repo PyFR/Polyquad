@@ -273,8 +273,17 @@ template<typename T>
 inline void
 PriDomain<T>::sort_arg(int i, int aoff, VectorXT& args) const
 {
-    if ((i == 4 || i == 5) && args(aoff + 1) < args(aoff + 0))
-        std::swap(args(aoff + 0), args(aoff + 1));
+    if (i == 4 || i == 5)
+    {
+        T baryc[] =
+        {
+            args(aoff + 0),
+            args(aoff + 1),
+            1 - args(aoff + 0) - args(aoff + 1)
+        };
+        std::sort(baryc, baryc + 3);
+        std::copy(args.data() + aoff, args.data() + aoff + 2, baryc);
+    }
 }
 
 }
