@@ -104,7 +104,7 @@ int main(int argc, const char *argv[])
         ("dtype,d", po::value<std::string>()->default_value("double"),
          ("Data type: " + boost::algorithm::join(dtypes, ", ")).c_str())
         ("qdeg,q", po::value<int>()->required(), "Target quadrature degree")
-        ("maxfev,m", po::value<int>()->default_value(-1, ""),
+        ("maxfev,m", po::value<int>()->default_value(1000000, ""),
          "Maximum number of objective function evaluations")
         ("positive,p", po::value<bool>()->default_value(false)->zero_tokens(),
          "Enforce positivity of weights")

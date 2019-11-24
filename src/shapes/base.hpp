@@ -302,7 +302,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::minimise(int maxfev)
 
     // Perform the minimisation
     Eigen::LevenbergMarquardt<min_functor_ndiff> lm(fd);
-    lm.setMaxfev(maxfev > 0 ? maxfev : 40*qdeg_*qdeg_);
+    lm.setMaxfev(maxfev);
     lm.minimize(args_);
 
     // Clamp the arguments to ensure all points are inside the domain
