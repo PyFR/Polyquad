@@ -107,7 +107,7 @@ private:
                               std::vector<VectorOrb>& solns) const;
 
     int qdeg_;
-    int poswts_;
+    bool poswts_;
     const T f0_;
 
     VectorOrb orbits_;
