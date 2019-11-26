@@ -103,6 +103,8 @@ int main(int argc, const char *argv[])
          ("Shape: " + boost::algorithm::join(shapes, ", ")).c_str())
         ("dtype,d", po::value<std::string>()->default_value("double"),
          ("Data type: " + boost::algorithm::join(dtypes, ", ")).c_str())
+        ("walltime,w", po::value<int>()->default_value(300),
+         "Approximate run time in seconds")
         ("qdeg,q", po::value<int>()->required(), "Target quadrature degree")
         ("maxfev,m", po::value<int>()->default_value(1000000, ""),
          "Maximum number of objective function evaluations")
@@ -133,8 +135,6 @@ int main(int argc, const char *argv[])
     action_opts.insert({"find", std::string("Find action options")});
     action_opts["find"].add_options()
         ("npts,n", po::value<int>()->required(), "Desired number of points")
-        ("walltime,w", po::value<int>()->default_value(300),
-         "Approximate run time in seconds")
         ("nprelim,f", po::value<int>()->default_value(8),
          "For two phase runs how many preliminary runs to perform")
         ("two-phase,b", po::value<bool>()->default_value(false)->zero_tokens(),

@@ -39,89 +39,16 @@
 #include <map>
 #include <random>
 #include <sstream>
+#include <tuple>
 #include <utility>
 #include <vector>
 
 namespace polyquad {
 
-namespace mpi = boost::mpi;
-
 #ifdef POLYQUAD_HAVE_MPI
-static const int npts_tag = 1;
-static const int rule_tag = 2;
-
-static void
-post_npts(mpi::communicator& world, int npts)
-{
-    const int rank = world.rank();
-    const int size = world.size();
-
-    std::vector<mpi::request> reqs;
-
-    // Inform the other ranks about our discovery
-    for (int i = 0; i < size; ++i)
-        if (i != rank)
-            reqs.emplace_back(world.isend(i, npts_tag, npts));
-
-    mpi::wait_all(std::begin(reqs), std::end(reqs));
-}
-
-static void
-probe_npts(mpi::communicator& world, int& ub)
-{
-    // See if any other ranks have improved on ub
-    while (world.iprobe(mpi::any_source, npts_tag))
-    {
-        int i;
-        world.recv(mpi::any_source, npts_tag, i);
-
-        if (i < ub)
-            ub = i;
-    }
-}
-
-static void
-post_rule(mpi::communicator& world, int npts, const std::string& rstr)
-{
-    // Send the rule to the root rank for printing
-    if (world.rank() != 0)
-        world.send(0, rule_tag, make_pair(npts, rstr));
-
-    // Broadcast npts
-    post_npts(world, npts);
-}
-
-static void
-probe_rules(mpi::communicator& world, int& printed_npts)
-{
-    // Check if any rules have been forwarded to us
-    while (world.iprobe(mpi::any_source, rule_tag))
-    {
-        std::pair<int, std::string> rule;
-        world.recv(mpi::any_source, rule_tag, rule);
-
-        if (rule.first < printed_npts)
-        {
-            std::cout << rule.second << std::flush;
-            printed_npts = rule.first;
-        }
-    }
-}
+namespace mpi = boost::mpi;
 #endif
-
-template<typename Generator>
-int pick_npts(Generator& g, double lambda, int lb, int ub)
-{
-    int npts;
-    std::exponential_distribution<double> dist(lambda);
-
-    do
-    {
-        npts = ub - int(dist(g)) - 1;
-    } while (npts <= lb);
-
-    return npts;
-}
+namespace po = boost::program_options;
 
 template<typename D, typename R>
 std::string
@@ -137,193 +64,375 @@ rule_to_str(int qdeg, int npts, const D& decomp, const R& args, int outprec)
 }
 
 template<template<typename> class Domain, typename T>
-void
-process_iterate(const boost::program_options::variables_map& vm)
+class IterateAction
 {
+public:
     typedef typename Domain<T>::MatrixXT MatrixXT;
     typedef typename Domain<T>::VectorXT VectorXT;
     typedef typename Domain<T>::MatrixPtsT MatrixPtsT;
     typedef typename Domain<T>::VectorOrb VectorOrb;
 
-#ifdef POLYQUAD_HAVE_MPI
-    mpi::environment env;
-    mpi::communicator world;
+    struct DecompRecord
+    {
+        VectorOrb orbit;
+        int ntries;
+        double resid;
+    };
 
-    const int rank = world.rank();
-#else
-    const int rank = 0;
+    enum
+    {
+        RuleTag,
+        NptsTag,
+        StatsTag
+    };
+
+public:
+    IterateAction(const po::variables_map& vm);
+
+    void run();
+
+private:
+    static constexpr double InitResid = 1e8;
+
+    void update_decomps(int ub);
+
+    void pick_decomp();
+
+    bool attempt_to_minimise(double& rresid);
+
+#ifdef POLYQUAD_HAVE_MPI
+    void pump_messages();
+
+    template<typename Object>
+    void post_message(int tag, const Object& obj);
 #endif
 
-    // Pinciple domain
-    Domain<T> dom;
+private:
+    std::mt19937 rand_eng_;
 
-    // Flags
-    const bool poswts = vm["positive"].as<bool>();
-    const bool verbose = vm["verbose"].as<bool>();
+    Domain<T> dom_;
 
-    // Min/max point count
-    const int lb = vm["lb"].as<int>();
-    int ub = vm["ub"].as<int>();
+    Timer t_;
+    int runtime_;
 
-    // Desired quadrature degree
-    const int qdeg = vm["qdeg"].as<int>();
-    const int maxfev = vm["maxfev"].as<int>();
+    std::map<std::pair<int, int>, DecompRecord> drecords_;
+    std::vector<std::pair<int, int>> dixs_;
 
-    const int nprelim = 5;
-    const double lambda = 0.1;
+    const int qdeg_;
+    const int maxfev_;
 
-    // Floating point tolerance and output precision
-    const T tol = vm.count("tol") ? static_cast<T>(vm["tol"].as<double>())
-                                  : Eigen::NumTraits<T>::dummy_precision();
-    const int outprec = vm["output-prec"].as<int>();
+    const bool poswts_;
+    const bool verbose_;
 
-    // Number of points in the last rule we printed
-    int printed_npts = ub;
+    const int lb_;
+    int ub_;
 
-    // Random number generator
-    std::mt19937 rand_eng((std::random_device()()));
+    const int ntries_;
+
+    T tol_;
+    const int outprec_;
+
+    std::pair<int, int> active_;
+
+#ifdef POLYQUAD_HAVE_MPI
+    mpi::communicator world_;
+
+    int rank_;
+    int size_;
+    int printed_npts_;
+#endif
+};
+
+template<template<typename> class Domain, typename T>
+inline
+IterateAction<Domain, T>::IterateAction(const po::variables_map& vm)
+    : rand_eng_(std::random_device()())
+    , runtime_(vm["walltime"].as<int>())
+    , qdeg_(vm["qdeg"].as<int>())
+    , maxfev_(vm["maxfev"].as<int>())
+    , poswts_(vm["positive"].as<bool>())
+    , verbose_(vm["verbose"].as<bool>())
+    , lb_(vm["lb"].as<int>())
+    , ntries_(3)
+    , outprec_(vm["output-prec"].as<int>())
+#ifdef POLYQUAD_HAVE_MPI
+    , rank_(world_.rank())
+    , size_(world_.size())
+    , printed_npts_(vm["ub"].as<int>())
+#endif
+{
+    // Process the tolerance
+    tol_ = vm.count("tol") ? static_cast<T>(vm["tol"].as<double>())
+                           : Eigen::NumTraits<T>::dummy_precision();
+
+    update_decomps(vm["ub"].as<int>());
+}
+
+template<template<typename> class Domain, typename T>
+inline void
+IterateAction<Domain, T>::update_decomps(int ub)
+{
+    // Update the upper bound
+    ub_ = ub;
+
+    // Remove invalid decompositions from the map
+    for (auto it = std::begin(drecords_); it != std::end(drecords_);)
+    {
+        if (it->first.first >= ub_)
+            it = drecords_.erase(it);
+        else
+            ++it;
+    }
 
     // Determine which point counts yield valid decompositions
-    std::map<int, std::pair<std::vector<VectorOrb>, std::vector<double>>> nptsorbits;
-    for (int i = lb + 1; i < ub; ++i)
+    for (int i = ub_ - 1; i > lb_; --i)
     {
-        std::vector<VectorOrb> orb = dom.symm_decomps(i);
+        const std::vector<VectorOrb> orbs = dom_.symm_decomps(i);
 
-        if (orb.size())
+        for (int j = 0; j < orbs.size(); ++j)
         {
-            std::vector<double> norms(orb.size(), 1e8);
+            if (drecords_.count({i, j}))
+                continue;
 
-            nptsorbits.insert({i, make_pair(orb, norms)});
+            bool insert = true;
+            for (const auto& kv : drecords_)
+                if (((kv.second.orbit - orbs[j]).array() >= 0).all())
+                {
+                    insert = false;
+                    break;
+                }
+
+            if (insert)
+                drecords_[{i, j}] = {orbs[j], 0, InitResid};
         }
     }
 
-    int npts;
+    // Update the decomposition list
+    dixs_.clear();
+    for (const auto& kv : drecords_)
+        dixs_.push_back(kv.first);
+}
 
-    // Main search loop
-start:
-    // Prune nptsorbits
-    nptsorbits.erase(nptsorbits.upper_bound(ub - 1), std::end(nptsorbits));
+template<template<typename> class Domain, typename T>
+inline void
+IterateAction<Domain, T>::pick_decomp()
+{
+    const int sz = drecords_.size();
+    const int n = std::min(5, sz);
 
-    // Return if no points remain
-    if (!nptsorbits.size())
-        return;
-
-    // Pick npts
-    do
+    auto cmp = [&](const auto& i, const auto& j)
     {
-        npts = pick_npts(rand_eng, lambda, lb, ub);
-    } while (!nptsorbits.count(npts));
+        const DecompRecord& p = drecords_[i];
+        const DecompRecord& q = drecords_[j];
 
-    // Obtain the orbital decompositions of npts and their associated norms
-    const auto& orbits = nptsorbits[npts].first;
-    auto& norms = nptsorbits[npts].second;
+        return p.resid*sqrt(p.ntries) < q.resid*sqrt(q.ntries);
+    };
 
-    // Start the timer
-    Timer t;
-
-    // Update the norms associated with each orbit
-    for (int i = 0; i < orbits.size(); ++i)
-    {
-        dom.configure(qdeg, poswts, orbits[i]);
-
-        for (int j = 0; j < nprelim; ++j)
+#ifdef POLYQUAD_HAVE_MPI
+    if (drecords_[dixs_[0]].resid == InitResid)
+        for (int i = 0; i < 2*size_; ++i)
         {
-            // Seed the orbit
-            dom.seed();
-
-            // Attempt to minimise
-            auto [norm, args] = dom.minimise(maxfev);
-
-            // Update the norm
-            norms[i] = std::min(static_cast<double>(norm), norms[i]);
-
-            // If we're lucky we may have found a rule
-            if (norm < tol)
+            int r = std::uniform_int_distribution(0, sz - 1)(rand_eng_);
+            if (drecords_[dixs_[r]].resid == InitResid)
             {
-                // Convert the rule to a string
-                auto rstr = rule_to_str(qdeg, npts, orbits[i], args, outprec);
-
-#ifdef POLYQUAD_HAVE_MPI
-                post_rule(world, npts, rstr);
-#endif
-
-                if (rank == 0)
-                    std::cout << rstr << std::flush;
-
-                // Update ub and continue
-                ub = npts;
-                goto start;
+                active_ = dixs_[r];
+                return;
             }
-        };
-    }
-
-    // Use these norms to determine a sequence in which to examine the orbits
-    std::vector<int> orbitseq(orbits.size());
-    std::iota(std::begin(orbitseq), std::end(orbitseq), 0);
-    std::sort(std::begin(orbitseq), std::end(orbitseq),
-              [&norms](int i, int j) { return norms[i] < norms[j]; });
-
-    // Limit ourselves to the top ten orbits
-    const int tryorbs = std::min<int>(10, orbits.size());
-
-    // Record how long we spent in the preliminary phase
-    const double pretime = t.elapsed();
-
-    // Reset the time for the main phase
-    t.reset();
-
-    for (int j = 0; ; j = (j + 1) % tryorbs)
-    {
-        const int i = orbitseq[j];
-
-#ifdef POLYQUAD_HAVE_MPI
-        // If we are the root rank see if any rules need printing
-        if (rank == 0)
-            probe_rules(world, printed_npts);
-
-        // See if another rank has made progress
-        probe_npts(world, ub);
-        if (npts >= ub)
-            goto start;
-#endif
-
-        // Configure the domain for this orbit
-        dom.configure(qdeg, poswts, orbits[i]);
-
-        // Seed the orbit
-        dom.seed();
-
-        // Attempt to minimise
-        auto [norm, args] = dom.minimise(maxfev);
-
-        // Update the norm for this orbit
-        norms[i] = std::min(static_cast<double>(norm), norms[i]);
-
-        // See if a rule has been found
-        if (norm < tol)
-        {
-            // Convert the rule to a string
-            auto rstr = rule_to_str(qdeg, npts, orbits[i], args, outprec);
-
-#ifdef POLYQUAD_HAVE_MPI
-            // Inform other ranks of our progress
-            post_rule(world, npts, rstr);
-#endif
-
-            if (rank == 0)
-            {
-                std::cout << rstr << std::flush;
-                printed_npts = npts;
-            }
-
-            // Update ub and continue
-            ub = npts;
-            goto start;
         }
-        // If too much time has elapsed go back to the start
-        else if (t.elapsed() > 100*pretime)
-            goto start;
+#endif
+
+    // Sort the decompositions
+    std::partial_sort(std::begin(dixs_), std::begin(dixs_) + n,
+                      std::end(dixs_), cmp);
+
+    // One third of the time go with the optimal decomposition
+    if (rand_eng_() % 3 == 0)
+        active_ = dixs_[0];
+    // Otherwise, pick one of the top n decompositions
+    else
+        active_ = dixs_[std::uniform_int_distribution(0, n - 1)(rand_eng_)];
+}
+
+#ifdef POLYQUAD_HAVE_MPI
+template<template<typename> class Domain, typename T>
+inline void
+IterateAction<Domain, T>::pump_messages()
+{
+    boost::optional<mpi::status> status;
+
+    while ((status = world_.iprobe(mpi::any_source))) switch (status->tag())
+    {
+        case NptsTag:
+        {
+            int n;
+            world_.recv(mpi::any_source, NptsTag, n);
+
+            if (n < ub_)
+                update_decomps(n);
+
+            break;
+        }
+        case StatsTag:
+        {
+            std::tuple<std::pair<int, int>, int, double> s;
+            world_.recv(mpi::any_source, StatsTag, s);
+            auto [ij, ntries, resid] = s;
+
+            if (!drecords_.count(ij))
+                break;
+
+            auto& r = drecords_[ij];
+            r.ntries += ntries;
+            r.resid = std::min(r.resid, resid);
+
+            break;
+        }
+        case RuleTag:
+        {
+            std::pair<int, std::string> rule;
+            world_.recv(mpi::any_source, RuleTag, rule);
+
+            if (rule.first < printed_npts_)
+            {
+                std::cout << rule.second << std::flush;
+                printed_npts_ = rule.first;
+            }
+
+            break;
+        }
     }
+}
+
+template<template<typename> class Domain, typename T>
+template<typename Object>
+inline void
+IterateAction<Domain, T>::post_message(int tag, const Object& obj)
+{
+    std::vector<mpi::request> reqs;
+    reqs.reserve(size_ - 1);
+
+    for (int i = 0; i < size_; ++i)
+        if (i != rank_)
+            reqs.emplace_back(world_.isend(i, tag, obj));
+
+    mpi::wait_all(std::begin(reqs), std::end(reqs));
+}
+#endif
+
+template<template<typename> class Domain, typename T>
+inline bool
+IterateAction<Domain, T>::attempt_to_minimise(double& rresid)
+{
+    // Seed the domain and attempt to minimise
+    dom_.seed();
+    auto [resid, args] = dom_.minimise(maxfev_);
+
+    // Save the residual
+    rresid = resid;
+
+    // See if we've found a rule
+    if (resid < tol_)
+    {
+        const int npts = dom_.npts();
+
+        // Convert the rule to a string
+        auto rstr = rule_to_str(qdeg_, npts, dom_.orbits(), args, outprec_);
+
+#ifdef POLYQUAD_HAVE_MPI
+        // If we are not the root rank then send the rule for printing
+        if (rank_ != 0)
+            world_.send(0, RuleTag, make_pair(npts, rstr));
+
+        post_message(NptsTag, npts);
+
+        // If we are the root rank then print our rule
+        if (rank_ == 0)
+        {
+            std::cout << rstr << std::flush;
+            printed_npts_ = npts;
+        }
+#else
+        std::cout << rstr << std::flush;
+#endif
+
+        return true;
+    }
+    else
+        return false;
+}
+
+template<template<typename> class Domain, typename T>
+inline void
+IterateAction<Domain, T>::run()
+{
+    while (t_.elapsed() < runtime_)
+    {
+#ifdef POLYQUAD_HAVE_MPI
+        pump_messages();
+#endif
+
+        // Return if no points remain
+        if (!drecords_.size())
+            return;
+
+        // Pick a decomposition
+        pick_decomp();
+
+        auto& r = drecords_[active_];
+        int ntries = ntries_;
+
+        std::cout << active_.first << " " << active_.second << " " << r.resid << std::endl;
+
+        // Configure the domain for this decomposition
+        dom_.configure(qdeg_, poswts_, r.orbit);
+
+        // Try to minimise this decomposition
+        for (int j = 0; j < ntries; )
+        {
+            double resid;
+            if (attempt_to_minimise(resid))
+            {
+                update_decomps(active_.first);
+                break;
+            }
+            else if (resid < r.resid)
+            {
+                if (1.5*resid < r.resid && r.ntries)
+                    ntries = ntries*ntries;
+
+                r.resid = resid;
+            }
+            else
+            {
+                ++r.ntries;
+                ++j;
+            }
+
+#ifdef POLYQUAD_HAVE_MPI
+            pump_messages();
+
+            if (active_.first >= ub_)
+                break;
+#endif
+        }
+
+#ifdef POLYQUAD_HAVE_MPI
+        // Update the statistics for this decomposition
+        if (active_.first < ub_)
+            post_message(StatsTag, std::make_tuple(active_, ntries, r.resid));
+#endif
+    }
+}
+
+template<template<typename> class Domain, typename T>
+void
+process_iterate(const boost::program_options::variables_map& vm)
+{
+#ifdef POLYQUAD_HAVE_MPI
+    mpi::environment env;
+#endif
+
+    IterateAction<Domain, T>(vm).run();
 }
 
 }
