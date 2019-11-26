@@ -458,7 +458,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::symm_decomps_recurse(
     {
         partsoln(index) = range--;
 
-        if (static_cast<const Derived&>(*this).validate_orbit(partsoln))
+        if (Derived::validate_orbit(partsoln))
             solns.push_back(partsoln);
     }
 

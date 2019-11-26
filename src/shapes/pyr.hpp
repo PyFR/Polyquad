@@ -44,7 +44,7 @@ public:
     PyrDomain() : Base(2*sqrt(T(6))/3)
     {}
 
-    bool validate_orbit(const VectorOrb&) const
+    static bool validate_orbit(const VectorOrb&)
     { return true; }
 
 private:

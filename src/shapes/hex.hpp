@@ -44,7 +44,7 @@ public:
     HexDomain() : Base(sqrt(T(8)))
     {}
 
-    bool validate_orbit(const VectorOrb& orb) const
+    static bool validate_orbit(const VectorOrb& orb)
     { return orb(0) <= 1; }
 
 private:
