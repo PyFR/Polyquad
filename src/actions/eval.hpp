@@ -80,25 +80,22 @@ process_eval(const boost::program_options::variables_map& vm)
             // Compute the residual norm
             VectorXT resid(dom.nbfn());
             dom.wts(args, &resid);
-            T rnorm = resid.norm();
+            T norm = resid.norm();
 
             if (verbose)
                 std::cerr << resid;
 
             std::cout << "# Rule degree: " << qdeg << "\n"
-                      << "# Residual norm: " << rnorm << "\n";
+                      << "# Residual norm: " << norm << "\n";
 
             if (refine)
             {
                 // Take the current rule to be the seed for minimisation
                 dom.seed(args);
 
-                std::tie(rnorm, args) = dom.minimise(maxfev);
+                std::tie(norm, args) = dom.minimise(maxfev);
 
-                if (verbose)
-                    std::cerr << " (" << rnorm << ")";
-
-                std::cout << "# Refined residual norm: " << rnorm << "\n";
+                std::cout << "# Refined residual norm: " << norm << "\n";
             }
 
             print_compact(std::cout, outprec, orb, args);
