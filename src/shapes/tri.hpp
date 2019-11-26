@@ -127,16 +127,20 @@ template<typename T>
 inline void
 TriDomain<T>::seed_orbit(int i, int aoff, VectorXT& args)
 {
+    const std::array hist1a{240, 143, 119, 82, 117, 81, 58, 122, 143, 236};
+    const std::array hist2a{929, 505, 148, 148, 192, 43, 39, 29, 3, 1};
+    const std::array hist2b{123, 218, 258, 202, 265, 339, 197, 203, 222, 10};
+
     switch (i)
     {
         case 0:
             break;
         case 1:
-            args(aoff) = this->rand(0.0, 0.5);
+            args(aoff) = this->rand(0.0, 0.5, hist1a);
             break;
         case 2:
-            args(aoff + 0) = this->rand(0.0, 1.0 / 3.0);
-            args(aoff + 1) = this->rand(0.0, 1.0 / 3.0);
+            args(aoff + 0) = this->rand(0, 1.0 / 3.0, hist2a);
+            args(aoff + 1) = this->rand(0.0, 0.5, hist2b);
             break;
         default:
             assert(0 && "Bad orbit"), abort();
