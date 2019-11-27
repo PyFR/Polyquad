@@ -80,7 +80,7 @@ public:
     { return Ndim; }
 
     int nbfn() const
-    { return static_cast<const Derived&>(*this).nbfn_for_qdeg(qdeg_); }
+    { return Derived::nbfn_for_qdeg(qdeg_); }
 
     const VectorOrb& orbits() const
     { return orbits_; }
@@ -99,14 +99,22 @@ protected:
     template<std::size_t N>
     double rand(double a, double b, const std::array<int, N>& wts);
 
+    int arg_offset(int i, int j=0) const
+    { return arg_offset(orbits_, i, j); }
+
 private:
-    void sort_args(VectorXT& args) const;
+    static int arg_offset(const VectorOrb& orb, int i, int j=0)
+    { return std::inner_product(orb.data(), orb.data() + i, Derived::narg_for_orbit, 0)
+           + Derived::narg_for_orbit[i]*j; }
 
-    void symm_decomps_recurse(VectorOrb coeffs,
-                              int sum,
-                              VectorOrb& partsoln,
-                              std::vector<VectorOrb>& solns) const;
+    static void sort_args(const VectorOrb& orb, VectorXT& args);
 
+    static void symm_decomps_recurse(VectorOrb coeffs,
+                                     int sum,
+                                     VectorOrb& partsoln,
+                                     std::vector<VectorOrb>& solns);
+
+private:
     int qdeg_;
     bool poswts_;
     const T f0_;
@@ -177,15 +185,14 @@ BaseDomain<Derived, T, Ndim, Norbits>::seed()
 }
 
 template<typename Derived, typename T, int Ndim, int Norbits>
-inline typename BaseDomain<Derived, T, Ndim, Norbits>::VectorXT
-BaseDomain<Derived, T, Ndim, Norbits>::clamp_args(const VectorXT& args) const
+inline auto
+BaseDomain<Derived, T, Ndim, Norbits>::clamp_args(const VectorXT& args) const -> VectorXT
 {
-    const Derived& derived = static_cast<const Derived&>(*this);
     VectorXT nargs = args;
 
     for (int i = 0, aoff = 0; i < Norbits; ++i)
-        for (int j = 0; j < orbits_(i); ++j, aoff += derived.narg_for_orbit[i])
-            derived.clamp_arg(i, aoff, nargs);
+        for (int j = 0; j < orbits_(i); ++j, aoff += Derived::narg_for_orbit[i])
+            Derived::clamp_arg(i, aoff, nargs);
 
     return nargs;
 }
@@ -312,7 +319,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::minimise(int maxfev)
     args_ = derived.clamp_args(args_);
 
     // Sort these clamped arguments into a canonical order
-    derived.sort_args(args_);
+    derived.sort_args(orbits_, args_);
 
     // Compute the residual of these clamped points
     VectorXT resid(derived.nbfn());
@@ -400,15 +407,13 @@ BaseDomain<Derived, T, Ndim, Norbits>::rand(
 
 template<typename Derived, typename T, int Ndim, int Norbits>
 inline void
-BaseDomain<Derived, T, Ndim, Norbits>::sort_args(VectorXT& args) const
+BaseDomain<Derived, T, Ndim, Norbits>::sort_args(const VectorOrb& orb, VectorXT& args)
 {
-    const Derived& derived = static_cast<const Derived&>(*this);
-    int aoff = 0;
-
     for (int i = 0; i < Norbits; ++i)
     {
-        int nobi = orbits_(i);
-        int narg = derived.narg_for_orbit[i];
+        int nobi = orb(i);
+        int narg = Derived::narg_for_orbit[i];
+        int aoff = arg_offset(orb, i);
 
         // Skip orbits which have no arguments/are not present
         if (!narg || !nobi)
@@ -416,7 +421,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::sort_args(VectorXT& args) const
 
         // Sort the parameters inside of each orbit
         for (int j = 0; j < nobi; ++j)
-            derived.sort_arg(i, aoff + j*narg, args);
+            Derived::sort_arg(i, aoff + j*narg, args);
 
         // Map the arguments for the orbits of this type to a matrix
         Eigen::Map<MatrixXT> margs(args.data() + aoff, narg, nobi);
@@ -436,9 +441,6 @@ BaseDomain<Derived, T, Ndim, Norbits>::sort_args(VectorXT& args) const
 
             margs.col(mix).swap(margs.col(j));
         }
-
-        // Increment the offset in the argument vector
-        aoff += narg*nobi;
     }
 }
 
@@ -448,7 +450,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::symm_decomps_recurse(
         VectorOrb coeffs,
         int sum,
         VectorOrb& partsoln,
-        std::vector<VectorOrb>& solns) const
+        std::vector<VectorOrb>& solns)
 {
     int index;
     int mcoeff = coeffs.maxCoeff(&index);

@@ -53,8 +53,7 @@ private:
 
     static constexpr int npts_for_orbit[] = {1, 3, 6};
     static constexpr int narg_for_orbit[] = {0, 1, 2};
-
-    constexpr int nbfn_for_qdeg(int qdeg) const;
+    static constexpr int nbfn_for_qdeg(int qdeg);
 
     void expand_orbit(int i, int aoff, int poff,
                       const VectorXT& args, MatrixPtsT& pts) const;
@@ -64,18 +63,19 @@ private:
     template<typename D1, typename D2>
     void eval_orthob_block(const D1 pq, D2 out) const;
 
-    void clamp_arg(int i, int aoff, VectorXT& args) const;
 
-    void sort_arg(int i, int aoff, VectorXT& args) const;
+    static void clamp_arg(int i, int aoff, VectorXT& args);
+
+    static void sort_arg(int i, int aoff, VectorXT& args);
 
 private:
-    Vector2T bary_to_cart(const T& p1, const T& p2, const T& p3) const
+    static Vector2T bary_to_cart(const T& p1, const T& p2, const T& p3)
     { return {-p1 + p2 - p3, -p1 - p2 + p3}; }
 };
 
 template<typename T>
 inline constexpr int
-TriDomain<T>::nbfn_for_qdeg(int qdeg) const
+TriDomain<T>::nbfn_for_qdeg(int qdeg)
 {
     int n = 0;
 
@@ -184,7 +184,7 @@ TriDomain<T>::eval_orthob_block(const D1 pq, D2 out) const
 
 template<typename T>
 inline void
-TriDomain<T>::clamp_arg(int i, int aoff, VectorXT& args) const
+TriDomain<T>::clamp_arg(int i, int aoff, VectorXT& args)
 {
     switch (i)
     {
@@ -204,7 +204,7 @@ TriDomain<T>::clamp_arg(int i, int aoff, VectorXT& args) const
 
 template<typename T>
 inline void
-TriDomain<T>::sort_arg(int i, int aoff, VectorXT& args) const
+TriDomain<T>::sort_arg(int i, int aoff, VectorXT& args)
 {
     if (i == 2)
     {

@@ -52,8 +52,7 @@ private:
 
     static constexpr int npts_for_orbit[] = {1, 4, 6, 12, 24};
     static constexpr int narg_for_orbit[] = {0, 1, 1,  2,  3};
-
-    constexpr int nbfn_for_qdeg(int qdeg) const;
+    static constexpr int nbfn_for_qdeg(int qdeg);
 
     void expand_orbit(int i, int aoff, int poff, const VectorXT& args,
                       MatrixPtsT& pts) const;
@@ -63,9 +62,10 @@ private:
     template<typename D1, typename D2>
     void eval_orthob_block(const D1 pqr, D2 out) const;
 
-    void clamp_arg(int i, int aoff, VectorXT& args) const;
 
-    void sort_arg(int i, int aoff, VectorXT& args) const;
+    static void clamp_arg(int i, int aoff, VectorXT& args);
+
+    static void sort_arg(int i, int aoff, VectorXT& args);
 
 private:
     Vector3T bary_to_cart(const T& p1, const T& p2, const T& p3,
@@ -75,7 +75,7 @@ private:
 
 template<typename T>
 inline constexpr int
-TetDomain<T>::nbfn_for_qdeg(int qdeg) const
+TetDomain<T>::nbfn_for_qdeg(int qdeg)
 {
     int n = 0;
 
@@ -256,7 +256,7 @@ TetDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
 
 template<typename T>
 inline void
-TetDomain<T>::clamp_arg(int i, int aoff, VectorXT& args) const
+TetDomain<T>::clamp_arg(int i, int aoff, VectorXT& args)
 {
     switch (i)
     {
@@ -285,7 +285,7 @@ TetDomain<T>::clamp_arg(int i, int aoff, VectorXT& args) const
 
 template<typename T>
 inline void
-TetDomain<T>::sort_arg(int i, int aoff, VectorXT& args) const
+TetDomain<T>::sort_arg(int i, int aoff, VectorXT& args)
 {
     if (i == 2)
         args(aoff) = std::min(args(aoff), 0.5 - args(aoff));

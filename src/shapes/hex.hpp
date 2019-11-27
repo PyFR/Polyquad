@@ -52,8 +52,7 @@ private:
 
     static constexpr int npts_for_orbit[] = {1, 6, 8, 12, 24, 24, 48};
     static constexpr int narg_for_orbit[] = {0, 1, 1,  1,  2,  2,  3};
-
-    constexpr int nbfn_for_qdeg(int qdeg) const;
+    static constexpr int nbfn_for_qdeg(int qdeg);
 
     void expand_orbit(int i, int aoff, int poff,
                       const VectorXT& args,
@@ -64,14 +63,15 @@ private:
     template<typename D1, typename D2>
     void eval_orthob_block(const D1 pqr, D2 out) const;
 
-    void clamp_arg(int i, int aoff, VectorXT& args) const;
 
-    void sort_arg(int i, int aoff, VectorXT& args) const;
+    static void clamp_arg(int i, int aoff, VectorXT& args);
+
+    static void sort_arg(int i, int aoff, VectorXT& args);
 };
 
 template<typename T>
 inline constexpr int
-HexDomain<T>::nbfn_for_qdeg(int qdeg) const
+HexDomain<T>::nbfn_for_qdeg(int qdeg)
 {
     int n = 0;
 
@@ -318,7 +318,7 @@ HexDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
 
 template<typename T>
 inline void
-HexDomain<T>::clamp_arg(int i, int aoff, VectorXT& args) const
+HexDomain<T>::clamp_arg(int i, int aoff, VectorXT& args)
 {
     switch (i)
     {
@@ -346,7 +346,7 @@ HexDomain<T>::clamp_arg(int i, int aoff, VectorXT& args) const
 
 template<typename T>
 inline void
-HexDomain<T>::sort_arg(int i, int aoff, VectorXT& args) const
+HexDomain<T>::sort_arg(int i, int aoff, VectorXT& args)
 {
     if (i == 4 && args(aoff + 1) < args(aoff + 0))
         std::swap(args(aoff + 0), args(aoff + 1));
