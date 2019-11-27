@@ -54,8 +54,6 @@ public:
 
     void configure(int qdeg, bool poswts, const VectorOrb& orbits);
 
-    std::vector<VectorOrb> symm_decomps(int npts) const;
-
     void seed();
 
     void seed(const VectorXT& args)
@@ -101,6 +99,9 @@ protected:
 
     int arg_offset(int i, int j=0) const
     { return arg_offset(orbits_, i, j); }
+
+public:
+    static std::vector<VectorOrb> symm_decomps(int npts);
 
 private:
     static int arg_offset(const VectorOrb& orb, int i, int j=0)
@@ -158,11 +159,10 @@ BaseDomain<Derived, T, Ndim, Norbits>::configure(
 }
 
 template<typename Derived, typename T, int Ndim, int Norbits>
-inline std::vector<typename BaseDomain<Derived, T, Ndim, Norbits>::VectorOrb>
-BaseDomain<Derived, T, Ndim, Norbits>::symm_decomps(int npts) const
+inline auto
+BaseDomain<Derived, T, Ndim, Norbits>::symm_decomps(int npts) -> std::vector<VectorOrb>
 {
-    const Derived& derived = static_cast<const Derived&>(*this);
-    VectorOrb coeffs(derived.npts_for_orbit);
+    VectorOrb coeffs(Derived::npts_for_orbit);
 
     std::vector<VectorOrb> solns;
     VectorOrb partsoln = VectorOrb::Zero();
