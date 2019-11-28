@@ -234,7 +234,7 @@ IterateAction<Domain, T>::pick_decomp()
 
 #ifdef POLYQUAD_HAVE_MPI
     if (drecords_[dixs_[0]].resid == InitResid)
-        for (int i = 0; i < 2*size_; ++i)
+        while (true)
         {
             int r = std::uniform_int_distribution(0, sz - 1)(rand_eng_);
             if (drecords_[dixs_[r]].resid == InitResid)
