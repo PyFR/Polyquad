@@ -72,6 +72,7 @@ public:
     typedef typename Domain<T>::VectorXT VectorXT;
     typedef typename Domain<T>::MatrixPtsT MatrixPtsT;
     typedef typename Domain<T>::VectorOrb VectorOrb;
+    typedef std::tuple<std::pair<int, int>, int, double> Stats;
 
     struct DecompRecord
     {
@@ -277,17 +278,19 @@ IterateAction<Domain, T>::pump_messages()
         }
         case StatsTag:
         {
-            std::tuple<std::pair<int, int>, int, double> s;
-            world_.recv(mpi::any_source, StatsTag, s);
-            auto [ij, ntries, resid] = s;
+            std::vector<Stats> stats;
+            world_.recv(mpi::any_source, StatsTag, stats);
 
-            if (!drecords_.count(ij))
-                break;
+            for (const auto& s : stats)
+            {
+                auto [ij, ntries, resid] = s;
 
-            auto& r = drecords_[ij];
-            r.ntries += ntries;
-            r.resid = std::min(r.resid, resid);
-
+                if (auto dr = drecords_.find(ij); dr != std::end(drecords_))
+                {
+                    dr->second.ntries += ntries;
+                    dr->second.resid = std::min(dr->second.resid, resid);
+                }
+            }
             break;
         }
         case RuleTag:
@@ -375,6 +378,11 @@ template<template<typename> class Domain, typename T>
 inline void
 IterateAction<Domain, T>::run()
 {
+#ifdef POLYQUAD_HAVE_MPI
+    Timer tstats;
+    std::vector<Stats> stats;
+#endif
+
     while (t_.elapsed() < runtime_)
     {
 #ifdef POLYQUAD_HAVE_MPI
@@ -427,9 +435,17 @@ IterateAction<Domain, T>::run()
         }
 
 #ifdef POLYQUAD_HAVE_MPI
-        // Update the statistics for this decomposition
-        if (active_.first < ub_)
-            post_message(StatsTag, std::make_tuple(active_, ntries, r.resid));
+        // Record the statistics for this decomposition
+        if (auto dr = drecords_.find(active_); dr != std::end(drecords_))
+            stats.emplace_back(active_, ntries, dr->second.resid);
+
+        // Periodically, inform the other ranks of our stats
+        if (tstats.elapsed() > 30)
+        {
+            post_message(StatsTag, stats);
+            stats.clear();
+            tstats.reset();
+        }
 #endif
     }
 }
