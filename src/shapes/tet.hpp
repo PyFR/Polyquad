@@ -289,6 +289,8 @@ TetDomain<T>::sort_arg(int i, int aoff, VectorXT& args)
 {
     if (i == 2)
         args(aoff) = std::min(args(aoff), 0.5 - args(aoff));
+    else if (i == 3)
+        args(aoff + 1) = std::min(args(aoff + 1), 1 - 2*args(aoff + 0) - args(aoff + 1));
     else if (i == 4)
     {
         T baryc[] =
