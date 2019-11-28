@@ -59,7 +59,7 @@ rule_to_str(int qdeg, int npts, const D& decomp, const R& args, int outprec)
 
     ss << "# Rule degree: " << qdeg << " (" << npts << " pts)\n";
     print_compact(ss, outprec, decomp, args);
-    ss << std::endl;
+    ss << "\n";
 
     return ss.str();
 }

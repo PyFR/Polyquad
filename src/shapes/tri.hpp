@@ -94,7 +94,7 @@ TriDomain<T>::expand_orbit(int i, int aoff, int poff,
     {
         case 0:
         {
-            const T& a = static_cast<T>(1) / 3;
+            const T& a = T(1) / 3;
             pts.row(poff) = bary_to_cart(a, a, a);
             break;
         }

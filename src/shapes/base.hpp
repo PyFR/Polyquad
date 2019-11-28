@@ -223,7 +223,6 @@ BaseDomain<Derived, T, Ndim, Norbits>::eval_orthob(
         MatrixObatT& out) const
 {
     const Derived& derived = static_cast<const Derived&>(*this);
-
     int n = out.cols();
 
     if (std::is_fundamental<T>::value)
