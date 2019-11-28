@@ -35,6 +35,7 @@
 
 #include <Eigen/Dense>
 
+#include <any>
 #include <iostream>
 #include <map>
 #include <random>
@@ -136,6 +137,8 @@ private:
 
 #ifdef POLYQUAD_HAVE_MPI
     mpi::communicator world_;
+
+    std::list<std::pair<std::any, std::vector<mpi::request>>> reqs_;
 
     int rank_;
     int size_;
@@ -308,14 +311,21 @@ template<typename Object>
 inline void
 IterateAction<Domain, T>::post_message(int tag, const Object& obj)
 {
-    std::vector<mpi::request> reqs;
-    reqs.reserve(size_ - 1);
+    // See if any existing requests have finished
+    reqs_.remove_if([](auto& rr)
+    {
+        return std::all_of(std::begin(rr.second), std::end(rr.second),
+                           [](auto& r) {return r.test() ? true : false; });
+    });
+
+    // Create a new block of requests
+    auto& [aobj, mreqs] = reqs_.emplace_back();
+    aobj = obj;
+    mreqs.reserve(size_ - 1);
 
     for (int i = 0; i < size_; ++i)
         if (i != rank_)
-            reqs.emplace_back(world_.isend(i, tag, obj));
-
-    mpi::wait_all(std::begin(reqs), std::end(reqs));
+            mreqs.push_back(world_.isend(i, tag, std::any_cast<Object>(aobj)));
 }
 #endif
 
