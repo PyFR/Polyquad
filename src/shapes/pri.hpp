@@ -24,6 +24,7 @@
 
 #include <Eigen/Dense>
 
+#include <array>
 #include <cassert>
 
 namespace polyquad {
@@ -167,33 +168,37 @@ template<typename T>
 inline void
 PriDomain<T>::seed_orbit(int i, int aoff, VectorXT& args)
 {
-    auto seeda = [&]() { return this->rand(0, 0.5); };
-    auto seedb = [&]() { return this->rand(0, 1.0 / 3.0); };
-    auto seedc = [&]() { return sqrt(1 - pow(this->rand(), 2)); };
+    const std::array hist1a{240, 143, 119, 82, 117, 81, 58, 122, 143, 236};
+    const std::array hist2a{929, 505, 148, 148, 192, 43, 39, 29, 3, 1};
+    const std::array hist2b{123, 218, 258, 202, 265, 339, 197, 203, 222, 10};
 
+    auto seed1a = [&]() { return this->rand(0, 0.5, hist1a); };
+    auto seed2a = [&]() { return this->rand(0, 1.0 / 3.0, hist2a); };
+    auto seed2b = [&]() { return this->rand(0, 0.5, hist2b); };
+    auto seed3a = [&]() { return sqrt(1 - pow(this->rand(), 2)); };
 
     switch (i)
     {
         case 0:
             break;
         case 1:
-            args(aoff) = seedc();
+            args(aoff) = seed3a();
             break;
         case 2:
-            args(aoff) = seeda();
+            args(aoff) = seed1a();
             break;
         case 3:
-            args(aoff + 0) = seeda();
-            args(aoff + 1) = seedc();
+            args(aoff + 0) = seed1a();
+            args(aoff + 1) = seed3a();
             break;
         case 4:
-            args(aoff + 0) = seedb();
-            args(aoff + 1) = seedb();
+            args(aoff + 0) = seed2a();
+            args(aoff + 1) = seed2b();
             break;
         case 5:
-            args(aoff + 0) = seedb();
-            args(aoff + 1) = seedb();
-            args(aoff + 2) = seedc();
+            args(aoff + 0) = seed2a();
+            args(aoff + 1) = seed2b();
+            args(aoff + 2) = seed3a();
             break;
         default:
             assert(0 && "Bad orbit"), abort();
