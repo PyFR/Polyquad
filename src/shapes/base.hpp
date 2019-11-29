@@ -83,7 +83,8 @@ public:
     const VectorOrb& orbits() const
     { return orbits_; }
 
-    int npts() const;
+    int npts() const
+    { return npts(orbits_); }
 
     int nwts() const
     { return orbits_.sum(); }
@@ -104,9 +105,18 @@ public:
     static std::vector<VectorOrb> symm_decomps(int npts);
 
 private:
-    static int arg_offset(const VectorOrb& orb, int i, int j=0)
-    { return std::inner_product(orb.data(), orb.data() + i, Derived::narg_for_orbit, 0)
-           + Derived::narg_for_orbit[i]*j; }
+    static constexpr int npts(const VectorOrb& orb)
+    {
+        return std::inner_product(orb.data(), orb.data() + Norbits,
+                                  Derived::npts_for_orbit, 0);
+    }
+
+    static constexpr int arg_offset(const VectorOrb& orb, int i, int j=0)
+    {
+        return std::inner_product(orb.data(), orb.data() + i,
+                                  Derived::narg_for_orbit, 0)
+             + Derived::narg_for_orbit[i]*j;
+    }
 
     static void sort_args(const VectorOrb& orb, VectorXT& args);
 
@@ -357,19 +367,6 @@ BaseDomain<Derived, T, Ndim, Norbits>::wts(
     }
 
     return wts_;
-}
-
-template<typename Derived, typename T, int Ndim, int Norbits>
-inline int
-BaseDomain<Derived, T, Ndim, Norbits>::npts() const
-{
-    const Derived& derived = static_cast<const Derived&>(*this);
-    int s = 0;
-
-    for (int i = 0; i < Norbits; ++i)
-        s += orbits_(i)*derived.npts_for_orbit[i];
-
-    return s;
 }
 
 template<typename Derived, typename T, int Ndim, int Norbits>
