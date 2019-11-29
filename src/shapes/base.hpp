@@ -273,8 +273,8 @@ BaseDomain<Derived, T, Ndim, Norbits>::expand_wts(
 
 
 template<typename Derived, typename T, int Ndim, int Norbits>
-inline std::tuple<T, typename BaseDomain<Derived, T, Ndim, Norbits>::VectorXT>
-BaseDomain<Derived, T, Ndim, Norbits>::minimise(int maxfev)
+inline auto
+BaseDomain<Derived, T, Ndim, Norbits>::minimise(int maxfev) -> std::tuple<T, VectorXT>
 {
     struct min_functor : Eigen::DenseFunctor<T>
     {
@@ -329,9 +329,9 @@ BaseDomain<Derived, T, Ndim, Norbits>::minimise(int maxfev)
 }
 
 template<typename Derived, typename T, int Ndim, int Norbits>
-inline typename BaseDomain<Derived, T, Ndim, Norbits>::VectorXT
+inline auto
 BaseDomain<Derived, T, Ndim, Norbits>::wts(
-        const VectorXT& args, VectorXT* resid)
+        const VectorXT& args, VectorXT* resid) -> VectorXT
 {
     const Derived& derived = static_cast<const Derived&>(*this);
 
