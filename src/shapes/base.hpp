@@ -183,7 +183,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::symm_decomps(int npts) -> std::vector<Vec
 }
 
 template<typename Derived, typename T, int Ndim, int Norbits>
-inline void
+[[gnu::flatten]] inline void
 BaseDomain<Derived, T, Ndim, Norbits>::seed()
 {
     Derived& derived = static_cast<Derived&>(*this);
@@ -195,7 +195,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::seed()
 }
 
 template<typename Derived, typename T, int Ndim, int Norbits>
-inline auto
+[[gnu::flatten]] inline auto
 BaseDomain<Derived, T, Ndim, Norbits>::clamp_args(const VectorXT& args) const -> VectorXT
 {
     VectorXT nargs = args;
@@ -208,7 +208,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::clamp_args(const VectorXT& args) const ->
 }
 
 template<typename Derived, typename T, int Ndim, int Norbits>
-inline void
+[[gnu::flatten]] inline void
 BaseDomain<Derived, T, Ndim, Norbits>::expand(
         const VectorXT& args,
         MatrixPtsT& pts) const
@@ -227,7 +227,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::expand(
 }
 
 template<typename Derived, typename T, int Ndim, int Norbits>
-inline void
+[[gnu::flatten]] inline void
 BaseDomain<Derived, T, Ndim, Norbits>::eval_orthob(
         const MatrixPtsT& pts,
         MatrixObatT& out) const

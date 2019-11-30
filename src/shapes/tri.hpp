@@ -86,7 +86,7 @@ TriDomain<T>::nbfn_for_qdeg(int qdeg)
 }
 
 template<typename T>
-EIGEN_ALWAYS_INLINE void
+void
 TriDomain<T>::expand_orbit(int i, int aoff, int poff,
                            const VectorXT& args, MatrixPtsT& pts) const
 {
