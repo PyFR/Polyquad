@@ -63,6 +63,8 @@ private:
     template<typename D1, typename D2>
     void eval_orthob_block(const D1 pqr, D2 out) const;
 
+    template<typename ReplaceF>
+    static void collapse_arg(int i, int aoff, const VectorXT& args, ReplaceF replace, const T& tol);
 
     static void clamp_arg(int i, int aoff, VectorXT& args);
 
@@ -212,6 +214,27 @@ PyrDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
 
         pow2mi /= 4;
         pow1mci *= (1 - c)*(1 - c);
+    }
+}
+
+template<typename T>
+template<typename ReplaceF>
+void inline
+PyrDomain<T>::collapse_arg(int i, int aoff, const VectorXT& args,
+                           ReplaceF replace, const T& tol)
+{
+    if ((i == 1 || i == 2) && args(aoff + 0) < tol)
+        replace(0, args(aoff + 1));
+    else if (i == 3)
+    {
+        const T& a = args(aoff + 0), b = args(aoff + 1), c = args(aoff + 2);
+
+        if (b < tol)
+            replace(0, c);
+        else if (a < tol)
+            replace(1, b, c);
+        else if (abs(a - b) < tol)
+            replace(2, b, c);
     }
 }
 

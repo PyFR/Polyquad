@@ -72,6 +72,8 @@ public:
     typedef typename Domain<T>::VectorXT VectorXT;
     typedef typename Domain<T>::MatrixPtsT MatrixPtsT;
     typedef typename Domain<T>::VectorOrb VectorOrb;
+    typedef typename Domain<T>::VectorOrbArgs VectorOrbArgs;
+
     typedef std::tuple<std::pair<int, int>, int, double> Stats;
 
     struct DecompRecord
@@ -100,7 +102,7 @@ private:
 
     void pick_decomp();
 
-    bool attempt_to_minimise(double& rresid);
+    bool attempt_to_minimise(int maxfev, double* rresid=nullptr);
 
 #ifdef POLYQUAD_HAVE_MPI
     void pump_messages();
@@ -113,6 +115,7 @@ private:
     std::mt19937 rand_eng_;
 
     Domain<T> dom_;
+    std::vector<VectorOrbArgs> seen_red_;
 
     Timer t_;
     int runtime_;
@@ -132,6 +135,7 @@ private:
     const int ntries_;
 
     T tol_;
+    const T collapse_tol_;
     const int outprec_;
 
     std::pair<int, int> active_;
@@ -158,6 +162,7 @@ IterateAction<Domain, T>::IterateAction(const po::variables_map& vm)
     , verbose_(vm["verbose"].as<bool>())
     , lb_(vm["lb"].as<int>())
     , ntries_(3)
+    , collapse_tol_(1e-2)
     , outprec_(vm["output-prec"].as<int>())
 #ifdef POLYQUAD_HAVE_MPI
     , rank_(world_.rank())
@@ -334,39 +339,73 @@ IterateAction<Domain, T>::post_message(int tag, const Object& obj)
 
 template<template<typename> class Domain, typename T>
 inline bool
-IterateAction<Domain, T>::attempt_to_minimise(double& rresid)
+IterateAction<Domain, T>::attempt_to_minimise(int maxfev, double* rresid)
 {
-    // Seed the domain and attempt to minimise
-    dom_.seed();
-    auto [resid, args] = dom_.minimise(maxfev_);
+    // Attempt to minimise
+    auto [resid, args] = dom_.minimise(maxfev);
 
     // Save the residual
-    rresid = resid;
+    if (rresid)
+        *rresid = resid;
 
     // See if we've found a rule
     if (resid < tol_)
     {
-        const int npts = dom_.npts();
+        int npts = dom_.npts();
 
-        // Convert the rule to a string
-        auto rstr = rule_to_str(qdeg_, npts, dom_.orbits(), args, outprec_);
+        // See if it is superior in terms of point count
+        if (npts < ub_)
+        {
+            // Convert the rule to a string
+            auto rstr = rule_to_str(qdeg_, npts, dom_.orbits(), args, outprec_);
 
 #ifdef POLYQUAD_HAVE_MPI
-        // If we are not the root rank then send the rule for printing
-        if (rank_ != 0)
-            world_.send(0, RuleTag, make_pair(npts, rstr));
+            // If we are the root rank then print our rule
+            if (rank_ == 0)
+            {
+                std::cout << rstr << std::flush;
+                printed_npts_ = npts;
+            }
+            // Else send it to the root rank for printing
+            else
+                world_.send(0, RuleTag, make_pair(npts, rstr));
 
-        post_message(NptsTag, npts);
-
-        // If we are the root rank then print our rule
-        if (rank_ == 0)
-        {
-            std::cout << rstr << std::flush;
-            printed_npts_ = npts;
-        }
+            post_message(NptsTag, npts);
 #else
-        std::cout << rstr << std::flush;
+            std::cout << rstr << std::flush;
 #endif
+
+            // Update the decompositions map
+            update_decomps(npts);
+        }
+
+        // See if the rule can be further reduced
+        for (const auto& r : dom_.possible_reductions(args))
+        {
+            auto cmp = [&](const auto& s)
+            {
+                return (s.first - r.first).cwiseAbs().maxCoeff() == 0
+                    && (s.second - r.second).norm() < collapse_tol_;
+            };
+
+            // Ensure we have not considered this reduction before
+            if (std::any_of(std::begin(seen_red_), std::end(seen_red_), cmp))
+                continue;
+
+            // Configure the domain and verify the point count
+            dom_.configure(qdeg_, poswts_, r.first);
+            if (dom_.npts() <= lb_)
+                continue;
+
+            // Save the reduction
+            seen_red_.push_back(r);
+
+            dom_.seed(r.second);
+            attempt_to_minimise(maxfev);
+
+            if (seen_red_.size() > 1000)
+                break;
+        }
 
         return true;
     }
@@ -396,27 +435,37 @@ IterateAction<Domain, T>::run()
         // Pick a decomposition
         pick_decomp();
 
-        auto& r = drecords_[active_];
-        int ntries = ntries_;
+        const auto [aorbit, antries, aresid] = drecords_[active_];
 
-        std::cout << active_.first << " " << active_.second << " " << r.resid << std::endl;
+        std::cout << "Rank: "<< rank_ << " ub: " << ub_ << " " << active_.first << " "
+                  << active_.second << " "  << aresid << std::endl;
 
         // Configure the domain for this decomposition
-        dom_.configure(qdeg_, poswts_, r.orbit);
+        dom_.configure(qdeg_, poswts_, aorbit);
+
+        int ntries = ntries_;
+        int maxfev = 1000 + sqrt(antries + 1)*pow(dom_.ndof(), 2);
 
         // Try to minimise this decomposition
         for (int j = 0; j < ntries; )
         {
+            // Seed the domain
+            dom_.seed();
+
             double resid;
-            if (attempt_to_minimise(resid))
-            {
-                update_decomps(active_.first);
+            seen_red_.clear();
+
+            if (attempt_to_minimise(std::min(maxfev, maxfev_), &resid))
                 break;
-            }
-            else if (resid < r.resid)
+
+            auto& r = drecords_[active_];
+            if (resid < r.resid)
             {
                 if (1.5*resid < r.resid && r.ntries)
-                    ntries = ntries*ntries;
+                {
+                    ntries = 3*ntries;
+                    maxfev = 3*maxfev;
+                }
 
                 r.resid = resid;
             }

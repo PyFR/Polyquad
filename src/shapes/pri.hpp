@@ -63,6 +63,8 @@ private:
     template<typename D1, typename D2>
     void eval_orthob_block(const D1 pqr, D2 out) const;
 
+    template<typename ReplaceF>
+    static void collapse_arg(int i, int aoff, const VectorXT& args, ReplaceF replace, const T& tol);
 
     static void clamp_arg(int i, int aoff, VectorXT& args);
 
@@ -244,6 +246,62 @@ PriDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
 
         pow1mqi *= (1 - b)*(1 - b);
         pow2ip1 /= 4;
+    }
+}
+
+template<typename T>
+template<typename ReplaceF>
+void inline
+PriDomain<T>::collapse_arg(int i, int aoff, const VectorXT& args,
+                           ReplaceF replace, const T& tol)
+{
+    const T third = T(1) / 3;
+    auto small = [&](const auto& v) { return abs(v) < tol; };
+
+    if (i == 1 && small(args(aoff)))
+        replace(0);
+    else if (i == 2 && small(args(aoff) - third))
+        replace(0);
+    else if (i == 3)
+    {
+        const T a = args(aoff + 0), b = args(aoff + 1);
+
+        if (small(a - third) && small(b))
+            replace(0);
+        else if (small(a - third))
+            replace(1, b);
+        else if (small(b))
+            replace(2, a);
+    }
+    else if (i == 4)
+    {
+        const T a = args(aoff + 0), b = args(aoff + 1);
+
+        if (small(a - third) && small(b - third))
+            replace(0);
+        else if (small(a - b))
+            replace(1, a);
+        else if (small(b - (1 - a - b)))
+            replace(1, b);
+    }
+    else if (i == 5)
+    {
+        const T a = args(aoff + 0), b = args(aoff + 1), c = args(aoff + 2);
+
+        if (small(a - third) && small(b - third) && small(c))
+            replace(0);
+        else if (small(a - third) && small(b - third))
+            replace(1, c);
+        else if (small(a - b) && small(c))
+            replace(2, a);
+        else if (small(b - (1 - a - b)) && small(c))
+            replace(2, b);
+        else if (small(a - b))
+            replace(3, a, c);
+        else if (small(b - (1 - a - b)))
+            replace(3, b, c);
+        else if (small(c))
+            replace(4, a, b);
     }
 }
 

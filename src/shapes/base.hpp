@@ -45,6 +45,7 @@ public:
     typedef Eigen::Matrix<T, Eigen::Dynamic, Ndim> MatrixPtsT;
     typedef Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> MatrixObatT;
     typedef Eigen::Matrix<int, Norbits, 1> VectorOrb;
+    typedef std::pair<VectorOrb, VectorXT> VectorOrbArgs;
 
 public:
     BaseDomain(const T& f0)
@@ -91,6 +92,9 @@ public:
 
     int ndof() const;
 
+    std::vector<VectorOrbArgs> possible_reductions(const VectorXT& args,
+                                                   const T& tol=1e-2);
+
 protected:
     double rand(double a=0, double b=1)
     { return std::uniform_real_distribution<double>(a, b)(rand_eng_); }
@@ -117,6 +121,12 @@ private:
                                   Derived::narg_for_orbit, 0)
              + Derived::narg_for_orbit[i]*j;
     }
+
+    static VectorOrbArgs remove_orbit(const VectorOrb& orb, const VectorXT& args,
+                                      int i, int j);
+
+    static VectorOrbArgs add_orbit(const VectorOrb& orb, const VectorXT& args,
+                                   int i, const std::initializer_list<T> aiargs);
 
     static void sort_args(const VectorOrb& orb, VectorXT& args);
 
@@ -478,6 +488,98 @@ BaseDomain<Derived, T, Ndim, Norbits>::symm_decomps_recurse(
 
         symm_decomps_recurse(coeffCopy, rem, partsoln, solns);
     }
+}
+
+template<typename Derived, typename T, int Ndim, int Norbits>
+inline auto
+BaseDomain<Derived, T, Ndim, Norbits>::remove_orbit(
+    const VectorOrb& orb, const VectorXT& args,
+    int i, int j) -> VectorOrbArgs
+{
+    VectorOrb norb = orb; --norb(i);
+
+    int narg = Derived::narg_for_orbit[i];
+    int nh = arg_offset(orb, i, j), nt = args.size() - nh - narg;
+    VectorXT nargs(nh + nt);
+
+    nargs.head(nh) = args.head(nh);
+    nargs.tail(nt) = args.tail(nt);
+
+    return {norb, nargs};
+}
+
+template<typename Derived, typename T, int Ndim, int Norbits>
+inline auto
+BaseDomain<Derived, T, Ndim, Norbits>::add_orbit(
+    const VectorOrb& orb, const VectorXT& args,
+    int i, const std::initializer_list<T> aiargs) -> VectorOrbArgs
+{
+    VectorOrb norb = orb; ++norb(i);
+
+    int nh = arg_offset(orb, i), nt = args.size() - nh;
+    VectorXT nargs(args.size() + aiargs.size());
+
+    nargs.head(nh) = args.head(nh);
+    std::copy(std::cbegin(aiargs), std::cend(aiargs), nargs.data() + nh);
+    nargs.tail(nt) = args.tail(nt);
+
+    sort_args(norb, nargs);
+    return {norb, nargs};
+}
+
+template<typename Derived, typename T, int Ndim, int Norbits>
+inline auto
+BaseDomain<Derived, T, Ndim, Norbits>::possible_reductions(
+    const VectorXT& args,
+    const T& tol) -> std::vector<VectorOrbArgs>
+{
+    Derived& derived = static_cast<Derived&>(*this);
+    const auto wts = derived.wts(args);
+    std::vector<VectorOrbArgs> reductions;
+
+    // Loop over each orbit type
+    for (int i = 0, aoff = 0, woff = 0; i < Norbits; ++i)
+    {
+        int nobi = orbits_(i);
+        int narg = Derived::narg_for_orbit[i];
+
+        // Check for small weights
+        for (int j = 0; j < nobi; ++j)
+            if (abs(wts(woff++)) < tol)
+                reductions.push_back(remove_orbit(orbits_, args, i, j));
+
+        if (!nobi || !narg)
+            continue;
+
+        Eigen::Map<const MatrixXT> margs(args.data() + arg_offset(i), narg, nobi);
+
+        for (int j = 0; j < nobi; ++j, aoff += narg)
+        {
+            // See if the orbit is similar to any other orbits
+            for (int k = j + 1; k < nobi; ++k)
+                if ((margs.col(j) - margs.col(k)).norm() < tol)
+                    reductions.push_back(remove_orbit(orbits_, args, i, k));
+
+            auto replace = [&](int p, auto... param)
+            {
+                auto [rorb, rargs] = remove_orbit(orbits_, args, i, j);
+                auto [aorb, aargs] = add_orbit(rorb, rargs, p, {param...});
+
+                if (Derived::validate_orbit(aorb))
+                    reductions.push_back({aorb, aargs});
+                else
+                    reductions.push_back({rorb, rargs});
+            };
+
+            // See if the orbit exhibits degeneracy
+            Derived::collapse_arg(i, aoff, args, replace, tol);
+        }
+    }
+
+    std::sort(std::begin(reductions), std::end(reductions),
+              [](const auto& p, const auto& q)
+              { return npts(p.first) < npts(q.first); });
+    return reductions;
 }
 
 }

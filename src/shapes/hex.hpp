@@ -63,6 +63,8 @@ private:
     template<typename D1, typename D2>
     void eval_orthob_block(const D1 pqr, D2 out) const;
 
+    template<typename ReplaceF>
+    static void collapse_arg(int i, int aoff, const VectorXT& args, ReplaceF replace, const T& tol);
 
     static void clamp_arg(int i, int aoff, VectorXT& args);
 
@@ -314,6 +316,47 @@ HexDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
             }
         }
     }
+}
+
+template<typename T>
+template<typename ReplaceF>
+void inline
+HexDomain<T>::collapse_arg(int i, int aoff, const VectorXT& args,
+                           ReplaceF replace, const T& tol)
+{
+    auto ai = [&](int i) { return args(aoff + i) < tol; };
+    auto daij = [&](int i, int j) { return abs(args(aoff + i) - args(aoff + j)) < tol; };
+
+    if ((i == 1 || i == 2 || i == 3) && ai(0))
+        replace(0);
+    else if (i == 4 && ai(1))
+        replace(0);
+    else if (i == 4 && ai(0))
+        replace(1, args(aoff + 1));
+    else if (i == 4 && daij(1, 0))
+        replace(3, args(aoff + 1));
+    else if (i == 5 && ai(0) && ai(1))
+        replace(0);
+    else if (i == 5 && ai(0))
+        replace(1, args(aoff + 0));
+    else if (i == 5 && daij(1, 0))
+        replace(2, args(aoff + 1));
+    else if (i == 5 && ai(1))
+        replace(3, args(aoff + 0));
+    else if (i == 6 && ai(2))
+        replace(0);
+    else if (i == 6 && ai(1))
+        replace(1, args(aoff + 2));
+    else if (i == 6 && daij(0, 2))
+        replace(2, args(aoff + 2));
+    else if (i == 6 && ai(0) && daij(1, 2))
+        replace(3, args(aoff + 2));
+    else if (i == 6 && ai(0))
+        replace(4, args(aoff + 1), args(aoff + 2));
+    else if (i == 6 && daij(0, 1))
+        replace(5, args(aoff + 1), args(aoff + 2));
+    else if (i == 6 && daij(1, 2))
+        replace(5, args(aoff + 2), args(aoff + 0));
 }
 
 template<typename T>

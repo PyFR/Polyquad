@@ -63,6 +63,8 @@ private:
     template<typename D1, typename D2>
     void eval_orthob_block(const D1 pq, D2 out) const;
 
+    template<typename ReplaceF>
+    static void collapse_arg(int i, int aoff, const VectorXT& args, ReplaceF replace, const T& tol);
 
     static void clamp_arg(int i, int aoff, VectorXT& args);
 
@@ -179,6 +181,29 @@ TriDomain<T>::eval_orthob_block(const D1 pq, D2 out) const
 
         pow1mbi *= (1 - b)*(1 - b);
         pow2ip1 /= 4;
+    }
+}
+
+template<typename T>
+template<typename ReplaceF>
+void inline
+TriDomain<T>::collapse_arg(int i, int aoff, const VectorXT& args,
+                           ReplaceF replace, const T& tol)
+{
+    const T third = T(1) / 3;
+
+    if (i == 1 && abs(args(aoff) - third) < tol)
+        replace(0);
+    else if (i == 2)
+    {
+        const T a = args(aoff + 0), b = args(aoff + 1);
+
+        if (abs(a - third) < tol && abs(b - third) < tol)
+             replace(0);
+        else if (abs(a - b) < tol)
+            replace(1, a);
+        else if (abs(b - (1 - a - b)) < tol)
+            replace(1, b);
     }
 }
 

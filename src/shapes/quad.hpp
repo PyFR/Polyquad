@@ -63,6 +63,8 @@ private:
     template<typename D1, typename D2>
     void eval_orthob_block(const D1 pq, D2 out) const;
 
+    template<typename ReplaceF>
+    static void collapse_arg(int i, int aoff, const VectorXT& args, ReplaceF replace, const T& tol);
 
     static void clamp_arg(int i, int aoff, VectorXT& args);
 
@@ -178,6 +180,22 @@ QuadDomain<T>::eval_orthob_block(const D1 pq, D2 out) const
             out.row(off) = cij*jpp(i)*jpq(j);
         }
     }
+}
+
+template<typename T>
+template<typename ReplaceF>
+void inline
+QuadDomain<T>::collapse_arg(int i, int aoff, const VectorXT& args,
+                            ReplaceF replace, const T& tol)
+{
+    if ((i == 1 || i == 2) && args(aoff + 0) < tol)
+        replace(0);
+    else if (i == 3 && args(aoff + 1) < tol)
+        replace(0);
+    else if (i == 3 && args(aoff + 0) < tol)
+        replace(1, args(aoff + 1));
+    else if (i == 3 && abs(args(aoff + 1) - args(aoff + 0)) < tol)
+        replace(2, args(aoff + 1));
 }
 
 template<typename T>

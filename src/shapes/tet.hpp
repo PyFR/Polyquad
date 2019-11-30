@@ -62,6 +62,8 @@ private:
     template<typename D1, typename D2>
     void eval_orthob_block(const D1 pqr, D2 out) const;
 
+    template<typename ReplaceF>
+    static void collapse_arg(int i, int aoff, const VectorXT& args, ReplaceF replace, const T& tol);
 
     static void clamp_arg(int i, int aoff, VectorXT& args);
 
@@ -251,6 +253,49 @@ TetDomain<T>::eval_orthob_block(const D1 pqr, D2 out) const
         pow2mi /= 4;
         pow1mbi *= (1 - b)*(1 - b);
         pow1mci *= (1 - c)*(1 - c);
+    }
+}
+
+template<typename T>
+template<typename ReplaceF>
+void inline
+TetDomain<T>::collapse_arg(int i, int aoff, const VectorXT& args,
+                           ReplaceF replace, const T& tol)
+{
+    const T half = T(1) / 2, fourth = T(1) / 4;
+
+    if ((i == 1 || i == 2) && abs(args(aoff) - fourth) < tol)
+        replace(0);
+    else if (i == 3)
+    {
+        const T a = args(aoff + 0), b = args(aoff + 1);
+
+        if (abs(a - fourth) < tol && abs(b - fourth) < tol)
+            replace(0);
+        else if (abs(a - b) < tol)
+            replace(1, a);
+        else if (abs(b - (half - a)) < tol)
+            replace(2, a);
+    }
+    else if (i == 4)
+    {
+        const T a = args(aoff + 0), b = args(aoff + 1), c = args(aoff + 2);
+        const T d = 1 - a - b - c;
+
+        if (abs(c - fourth) < tol)
+            replace(0);
+        else if (abs(a - c) < tol)
+            replace(1, a);
+        else if (abs(b - d) < tol)
+            replace(1, b);
+        else if (abs(a - b) < tol &&  abs(c - d) < tol)
+            replace(2, a);
+        else if (abs(a - b) < tol)
+            replace(3, a, c);
+        else if (abs(b - c) < tol)
+            replace(3, b, a);
+        else if (abs(c - d) < tol)
+            replace(3, c, a);
     }
 }
 
