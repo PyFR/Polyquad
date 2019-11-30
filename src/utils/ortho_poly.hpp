@@ -40,7 +40,7 @@ private:
     int q_;
 
     const ArrayT x_;
-    ArrayT jm1_, jm2_;
+    ArrayT u_, v_;
 };
 
 template<typename ArrayT>
@@ -54,12 +54,9 @@ JacobiP<ArrayT>::operator()(int n)
     for (; q_ <= n; ++q_)
     {
         if (q_ == 0)
-            jm1_ = ArrayT::Constant(x_.rows(), x_.cols(), 1);
+            u_ = ArrayT::Constant(x_.rows(), x_.cols(), 1);
         else if (q_ == 1)
-        {
-            jm2_ = jm1_;
-            jm1_ = ((apb + 2)*x_ + amb) / 2;
-        }
+            v_ = ((apb + 2)*x_ + amb) / 2;
         else
         {
             int qapbpq = q_*(apb + q_), apbp2q = apb + 2*q_;
@@ -69,12 +66,14 @@ JacobiP<ArrayT>::operator()(int n)
             T bq = T(apbp2qm1*bbmaa) / (2*qapbpq*apbp2qm2);
             T cq = T(apbp2q)*((a_ + q_ - 1)*(b_ + q_ - 1)) / (qapbpq*apbp2qm2);
 
-            std::swap(jm1_, jm2_);
-            jm1_ = (aq*x_ - bq)*jm2_ - cq*jm1_;
+            if (q_ % 2)
+                v_ = (aq*x_ - bq)*u_ - cq*v_;
+            else
+                u_ = (aq*x_ - bq)*v_ - cq*u_;
         }
     }
 
-    return jm1_;
+    return (q_ % 2) ? u_ : v_;
 }
 
 template<typename ArrayT>
@@ -93,7 +92,7 @@ private:
     int q_;
 
     const ArrayT x2_;
-    ArrayT jm2_, jm4_;
+    ArrayT u_, v_;
 };
 
 template<typename ArrayT>
@@ -106,12 +105,9 @@ EvenLegendreP<ArrayT>::operator()(int n)
     for (; q_ <= n; q_ += 2)
     {
         if (q_ == 0)
-            jm2_ = ArrayT::Constant(x2_.rows(), x2_.cols(), 1);
+            u_ = ArrayT::Constant(x2_.rows(), x2_.cols(), 1);
         else if (q_ == 2)
-        {
-            jm4_ = ArrayT::Constant(x2_.rows(), x2_.cols(), 1);
-            jm2_ = (3*x2_ - 1) / 2;
-        }
+            v_ = (3*x2_ - 1) / 2;
         else
         {
             T cdq = q_*(q_ - 1)*(2*q_ - 5);
@@ -120,12 +116,14 @@ EvenLegendreP<ArrayT>::operator()(int n)
             T bq = T((2*q_ - 3)*(2*q_*q_ - 6*q_ + 3)) / cdq;
             T cq = T((2*q_ - 1)*(q_ - 2)*(q_ - 3)) / cdq;
 
-            std::swap(jm2_, jm4_);
-            jm2_ = (aq*x2_ - bq)*jm4_ - cq*jm2_;
+            if (q_ % 4)
+                v_ = (aq*x2_ - bq)*u_ - cq*v_;
+            else
+                u_ = (aq*x2_ - bq)*v_ - cq*u_;
         }
     }
 
-    return jm2_;
+    return (q_ % 4) ? u_ : v_;
 }
 
 }
