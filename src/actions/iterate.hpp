@@ -386,6 +386,13 @@ IterateAction<Domain, T>::attempt_to_minimise(int maxfev, double* rresid)
 
         return true;
     }
+    else if (resid < 1e-4)
+    {
+        int ub = ub_;
+        attempt_to_reduce(args);
+
+        return ub_ < ub;
+    }
     else
         return false;
 }
@@ -447,34 +454,30 @@ IterateAction<Domain, T>::run()
 
         const auto [aorbit, antries, aresid] = drecords_[active_];
 
-        std::cout << "Rank: "<< rank_ << " ub: " << ub_ << " " << active_.first << " "
-                  << active_.second << " "  << aresid << std::endl;
-
         // Configure the domain for this decomposition
         dom_.configure(qdeg_, poswts_, aorbit);
 
-        int ntries = ntries_;
-        int maxfev = 1000 + sqrt(antries + 1)*pow(dom_.ndof(), 2);
-
         // Try to minimise this decomposition
+        int ntries = ntries_;
         for (int j = 0; j < ntries; )
         {
-            // Seed the domain
-            dom_.seed();
-
             double resid;
+            dom_.seed();
             seen_red_.clear();
 
-            if (attempt_to_minimise(std::min(maxfev, maxfev_), &resid))
+            if (attempt_to_minimise(maxfev_, &resid))
                 break;
 
             auto& r = drecords_[active_];
             if (resid < r.resid)
             {
-                if (1.5*resid < r.resid && r.ntries)
+                if (1.5*resid < r.resid && r.resid < InitResid)
                 {
-                    ntries = 3*ntries;
-                    maxfev = 3*maxfev;
+                    std::cout << "Rank: "<< rank_ << " ub: " << ub_ << " "
+                              <<  active_.first << " " << active_.second << " "
+                              << r.resid << " " << resid << std::endl;
+
+                    ntries += 3;
                 }
 
                 r.resid = resid;

@@ -316,7 +316,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::minimise(int maxfev) -> std::tuple<T, Vec
             // Account for invalid arguments
             f(f.size() - 1) = (x - dom_.clamp_args(x)).norm();
 
-            return 0;
+            return (f.cwiseAbs().maxCoeff() > 100) ? -1 : 0;
         }
 
         Derived& dom_;
