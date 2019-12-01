@@ -115,7 +115,7 @@ ENDIF()
 
 # Auto-optimise for CPU arch for non-debug builds
 IF(NOT CMAKE_BUILD_TYPE MATCHES Debug)
-  ADD_DEFINITIONS("-Ofast -march=native")
+  ADD_DEFINITIONS("-O3 -march=native")
 ENDIF()
 
 # For release builds remove all debugging info
