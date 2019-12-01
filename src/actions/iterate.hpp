@@ -104,6 +104,8 @@ private:
 
     bool attempt_to_minimise(int maxfev, double* rresid=nullptr);
 
+    void attempt_to_reduce(const VectorXT& args);
+
 #ifdef POLYQUAD_HAVE_MPI
     void pump_messages();
 
@@ -162,7 +164,7 @@ IterateAction<Domain, T>::IterateAction(const po::variables_map& vm)
     , verbose_(vm["verbose"].as<bool>())
     , lb_(vm["lb"].as<int>())
     , ntries_(3)
-    , collapse_tol_(1e-2)
+    , collapse_tol_(5e-2)
     , outprec_(vm["output-prec"].as<int>())
 #ifdef POLYQUAD_HAVE_MPI
     , rank_(world_.rank())
@@ -380,37 +382,45 @@ IterateAction<Domain, T>::attempt_to_minimise(int maxfev, double* rresid)
         }
 
         // See if the rule can be further reduced
-        for (const auto& r : dom_.possible_reductions(args))
-        {
-            auto cmp = [&](const auto& s)
-            {
-                return (s.first - r.first).cwiseAbs().maxCoeff() == 0
-                    && (s.second - r.second).norm() < collapse_tol_;
-            };
-
-            // Ensure we have not considered this reduction before
-            if (std::any_of(std::begin(seen_red_), std::end(seen_red_), cmp))
-                continue;
-
-            // Configure the domain and verify the point count
-            dom_.configure(qdeg_, poswts_, r.first);
-            if (dom_.npts() <= lb_)
-                continue;
-
-            // Save the reduction
-            seen_red_.push_back(r);
-
-            dom_.seed(r.second);
-            attempt_to_minimise(maxfev);
-
-            if (seen_red_.size() > 1000)
-                break;
-        }
+        attempt_to_reduce(args);
 
         return true;
     }
     else
         return false;
+}
+
+template<template<typename> class Domain, typename T>
+inline void
+IterateAction<Domain, T>::attempt_to_reduce(const VectorXT& args)
+{
+    for (const auto& r : dom_.possible_reductions(args))
+    {
+        auto cmp = [&](const auto& s)
+        {
+            return (s.first - r.first).cwiseAbs().maxCoeff() == 0
+                && (s.second - r.second).norm() < collapse_tol_;
+        };
+
+        // Ensure we have not considered this reduction before
+        if (std::any_of(std::begin(seen_red_), std::end(seen_red_), cmp))
+            continue;
+
+        // Reconfigure the domain and verify the point count
+        dom_.configure(qdeg_, poswts_, r.first);
+        if (dom_.npts() <= lb_)
+            continue;
+
+        // Mark the reduction as seen
+        seen_red_.push_back(r);
+
+        dom_.seed(r.second);
+        attempt_to_minimise(maxfev_);
+
+        // If we've seen too many reductions then return
+        if (seen_red_.size() > 2500)
+            return;
+    }
 }
 
 template<template<typename> class Domain, typename T>
