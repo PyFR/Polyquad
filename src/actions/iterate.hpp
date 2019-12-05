@@ -119,7 +119,7 @@ private:
     Domain<T> dom_;
     std::vector<VectorOrbArgs> seen_red_;
 
-    Timer t_;
+    Timer twall_;
     int runtime_;
 
     std::map<std::pair<int, int>, DecompRecord> drecords_;
@@ -439,7 +439,7 @@ IterateAction<Domain, T>::run()
     std::vector<Stats> stats;
 #endif
 
-    while (t_.elapsed() < runtime_)
+    while (twall_.elapsed() < runtime_)
     {
 #ifdef POLYQUAD_HAVE_MPI
         pump_messages();
