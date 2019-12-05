@@ -510,6 +510,13 @@ IterateAction<Domain, T>::run()
         }
 #endif
     }
+
+#ifdef POLYQUAD_HAVE_MPI
+    // Cancel any outstanding MPI requests
+    for (auto& [aobj, rr] : reqs_)
+        for (auto& r : rr)
+            r.cancel();
+#endif
 }
 
 template<template<typename> class Domain, typename T>
