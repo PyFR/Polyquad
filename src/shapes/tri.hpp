@@ -24,6 +24,7 @@
 
 #include <Eigen/Dense>
 
+#include <array>
 #include <cassert>
 
 namespace polyquad {
@@ -138,11 +139,11 @@ TriDomain<T>::seed_orbit(int i, int aoff, VectorXT& args)
         case 0:
             break;
         case 1:
-            args(aoff) = this->rand(0.0, 0.5, hist1a);
+            args(aoff) = this->rand(0, 0.5, hist1a);
             break;
         case 2:
             args(aoff + 0) = this->rand(0, 1.0 / 3.0, hist2a);
-            args(aoff + 1) = this->rand(0.0, 0.5, hist2b);
+            args(aoff + 1) = this->rand(0, 0.5, hist2b);
             break;
         default:
             assert(0 && "Bad orbit"), abort();
