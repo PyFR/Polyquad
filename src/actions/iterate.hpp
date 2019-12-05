@@ -348,7 +348,7 @@ IterateAction<Domain, T>::attempt_to_minimise(int maxfev, double* rresid)
 
     // Save the residual
     if (rresid)
-        *rresid = resid;
+        *rresid = static_cast<double>(resid);
 
     // See if we've found a rule
     if (resid < tol_)

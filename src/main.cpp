@@ -31,12 +31,10 @@
 #include "utils/io.hpp"
 
 #include <boost/algorithm/string/join.hpp>
+#include <boost/multiprecision/cpp_bin_float.hpp>
+#include <boost/multiprecision/eigen.hpp>
 #include <boost/program_options.hpp>
 #include <Eigen/Dense>
-#ifdef POLYQUAD_HAVE_MPREAL
-# include <mpreal.h>
-# include <Eigen/MPRealSupport>
-#endif
 
 #include <iostream>
 #include <map>
@@ -44,6 +42,7 @@
 #include <string>
 #include <vector>
 
+namespace mp = boost::multiprecision;
 namespace po = boost::program_options;
 using namespace polyquad;
 
@@ -64,6 +63,7 @@ void process_dispatch(const po::variables_map& vm)
 
 int main(int argc, const char *argv[])
 {
+    typedef mp::cpp_bin_float_100 bfloat;
     typedef std::pair<std::string, std::string> shape_key;
     typedef void (*process_fn)(const po::variables_map&);
 
@@ -75,14 +75,12 @@ int main(int argc, const char *argv[])
         { {"tet",  "double"}, &process_dispatch<TetDomain,  double> },
         { {"pri",  "double"}, &process_dispatch<PriDomain,  double> },
         { {"pyr",  "double"}, &process_dispatch<PyrDomain,  double> },
-#ifdef POLYQUAD_HAVE_MPREAL
-        { {"tri",  "mpreal"}, &process_dispatch<TriDomain,  mpfr::mpreal> },
-        { {"quad", "mpreal"}, &process_dispatch<QuadDomain, mpfr::mpreal> },
-        { {"hex",  "mpreal"}, &process_dispatch<HexDomain,  mpfr::mpreal> },
-        { {"tet",  "mpreal"}, &process_dispatch<TetDomain,  mpfr::mpreal> },
-        { {"pri",  "mpreal"}, &process_dispatch<PriDomain,  mpfr::mpreal> },
-        { {"pyr",  "mpreal"}, &process_dispatch<PyrDomain,  mpfr::mpreal> },
-#endif
+        { {"tri",  "bfloat"}, &process_dispatch<TriDomain,  bfloat> },
+        { {"quad", "bfloat"}, &process_dispatch<QuadDomain, bfloat> },
+        { {"hex",  "bfloat"}, &process_dispatch<HexDomain,  bfloat> },
+        { {"tet",  "bfloat"}, &process_dispatch<TetDomain,  bfloat> },
+        { {"pri",  "bfloat"}, &process_dispatch<PriDomain,  bfloat> },
+        { {"pyr",  "bfloat"}, &process_dispatch<PyrDomain,  bfloat> },
     };
 
     std::set<std::string> shapes, dtypes;
@@ -110,12 +108,6 @@ int main(int argc, const char *argv[])
          "Maximum number of objective function evaluations")
         ("positive,p", po::value<bool>()->default_value(false)->zero_tokens(),
          "Enforce positivity of weights")
-#ifdef POLYQUAD_HAVE_MPREAL
-        ("mpfr-bits",
-         po::value<int>()->default_value(256)
-                         ->notifier(mpfr::mpreal::set_default_prec),
-         "Base precision for MPFR reals")
-#endif
         ("output-prec,P",
          po::value<int>()->default_value(Eigen::FullPrecision, ""),
          "Output precision")

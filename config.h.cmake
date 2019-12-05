@@ -9,8 +9,6 @@
 
 #define POLYQUAD_VERSION "@POLYQUAD_VERSION@"
 
-#cmakedefine POLYQUAD_HAVE_MPREAL
-
 #cmakedefine POLYQUAD_HAVE_MPI
 
 #endif // POLYQUAD_CONFIG_H

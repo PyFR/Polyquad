@@ -147,7 +147,6 @@ private:
 
     mutable MatrixPtsT pts_;
     mutable MatrixObatT obat_;
-    mutable Eigen::HouseholderQR<MatrixXT> qr_;
     mutable MatrixXT A_;
     mutable VectorXT b_;
     mutable VectorXT wts_;
@@ -160,7 +159,6 @@ BaseDomain<Derived, T, Ndim, Norbits>::configure(
         bool poswts,
         const VectorOrb& orbits)
 {
-    using Eigen::HouseholderQR;
 
     qdeg_ = qdeg;
     poswts_ = poswts;
@@ -172,7 +170,6 @@ BaseDomain<Derived, T, Ndim, Norbits>::configure(
     A_.resize(nbfn(), nwts());
     b_.resize(nbfn());
     wts_.resize(nwts());
-    qr_ = HouseholderQR<MatrixXT>(A_.rows(), A_.cols());
 
     b_.fill(0);
     b_(0) = f0_;
@@ -368,7 +365,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::wts(
     }
 
     // Compute the optimal set of weights
-    wts_ = qr_.compute(A_).solve(b_);
+    wts_.noalias() = A_.householderQr().solve(b_);
 
     if (resid)
     {

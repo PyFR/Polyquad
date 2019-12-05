@@ -62,17 +62,6 @@ TARGET_LINK_LIBRARIES(polyquad ${Boost_LIBRARIES})
 FIND_PACKAGE(Eigen3 REQUIRED)
 INCLUDE_DIRECTORIES(${EIGEN3_INCLUDE_DIR} ${EIGEN3_INCLUDE_DIR}/unsupported)
 
-# Find MPFR and the mpreal wrapper
-FIND_PACKAGE(MPFR)
-IF(MPFR_FOUND)
-    FIND_FILE(POLYQUAD_HAVE_MPREAL mpreal.h)
-    IF (POLYQUAD_HAVE_MPREAL)
-       INCLUDE_DIRECTORIES(${MPFR_INCLUDE_DIR})
-       LINK_DIRECTORIES(${MPFR_LIBRARY_DIR})
-       TARGET_LINK_LIBRARIES(polyquad ${MPFR_LIBRARIES})
-    ENDIF()
-ENDIF()
-
 ##################################################
 # MPI
 ##################################################

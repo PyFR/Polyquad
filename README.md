@@ -31,15 +31,12 @@ In order to build polyquad it is necessary to have first installed:
    revision;
  - [Boost](http://www.boost.org/), specifically
   - mpi (optional)
+  - multiprecision
   - program_options
   - serialization
- - [MPFR](http://www.mpfr.org/) (optional)
- - [MPFR C++](http://www.holoborodko.com/pavel/mpfr/) (optional)
 
 If Boost MPI and a suitable compiler are found then polyquad will be
-able to run on clusters.  Similarly, if the MPFR and the corresponding
-C++ wrapper are available then support for refining rules to arbitrary
-precision will be enabled.  As polyquad makes use of advanced template
+able to run on clusters.  As polyquad makes use of advanced template
 metaprogramming features it is important to build it using a compiler
 that supports the C++17 standard.  As of the time of writing the
 following compilers are known to have successfully built polyquad:

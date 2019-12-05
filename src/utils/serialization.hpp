@@ -22,9 +22,6 @@
 #include <boost/mpi/datatype.hpp>
 #include <boost/serialization/array.hpp>
 #include <boost/serialization/vector.hpp>
-#ifdef POLYQUAD_HAVE_MPREAL
-# include <mpreal.h>
-#endif
 
 #include <Eigen/Dense>
 
@@ -77,25 +74,6 @@ serialize(Archive& ar, Eigen::Matrix<Scalar, Rows, Cols>& m, unsigned int)
         ar & make_array(m.data(), m.size());
     }
 }
-
-#ifdef POLYQUAD_HAVE_MPREAL
-template<typename Archive>
-inline void
-serialize(Archive& ar, mpfr::mpreal& m, unsigned int)
-{
-    if (Archive::is_saving::value)
-    {
-        const std::string& ms = m.toString();
-        ar & const_cast<std::string&>(ms);
-    }
-    else
-    {
-        std::string ms;
-        ar & ms;
-        m = ms;
-    }
-}
-#endif /* POLYQUAD_HAVE_MPREAL */
 
 }
 
