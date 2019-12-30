@@ -135,6 +135,7 @@ int main(int argc, const char *argv[])
     // Rule iteration specific options
     action_opts.insert({"iterate", std::string("Iterate action options")});
     action_opts["iterate"].add_options()
+        ("limits,L", po::value<std::string>(), "Orbit limits")
         ("lb,l", po::value<int>()->required(), "Lower bound")
         ("ub,u", po::value<int>()->required(), "Upper bound");
 

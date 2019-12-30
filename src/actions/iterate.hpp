@@ -133,6 +133,7 @@ private:
 
     const int lb_;
     int ub_;
+    VectorOrb limits_;
 
     const int ntries_;
 
@@ -176,6 +177,19 @@ IterateAction<Domain, T>::IterateAction(const po::variables_map& vm)
     tol_ = vm.count("tol") ? static_cast<T>(vm["tol"].as<double>())
                            : Eigen::NumTraits<T>::dummy_precision();
 
+    // Process any limits
+    if (vm.count("limits"))
+    {
+        std::istringstream ifs(vm["limits"].as<std::string>());
+        ifs >> limits_;
+
+        for (int i = 0; i < limits_.size(); ++i)
+            if (limits_[i] <= 0)
+                limits_[i] = std::numeric_limits<int>::max();
+    }
+    else
+        limits_.fill(std::numeric_limits<int>::max());
+
     update_decomps(vm["ub"].as<int>());
 }
 
@@ -202,6 +216,9 @@ IterateAction<Domain, T>::update_decomps(int ub)
 
         for (int j = 0; j < orbs.size(); ++j)
         {
+            if (((limits_ - orbs[j]).array() < 0).any())
+                continue;
+
             if (drecords_.count({i, j}))
                 continue;
 
