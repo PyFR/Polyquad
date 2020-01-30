@@ -11,4 +11,6 @@
 
 #cmakedefine POLYQUAD_HAVE_MPI
 
+#define EIGEN_MATRIX_PLUGIN "utils/eigen_addons.hpp"
+
 #endif // POLYQUAD_CONFIG_H

@@ -29,6 +29,7 @@ SET(POLYQUAD_HEADERS
     src/shapes/pyr.hpp
     src/shapes/pri.hpp
     src/utils/io.hpp
+    src/utils/eigen_addons.hpp
     src/utils/ortho_poly.hpp
     src/utils/serialization.hpp
     src/utils/timer.hpp)
