@@ -87,7 +87,7 @@ HexDomain<T>::nbfn_for_qdeg(int qdeg)
 template<typename T>
 void
 HexDomain<T>::expand_orbit(int i, int aoff, int poff,
-                            const VectorXT& args, MatrixPtsT& pts) const
+                           const VectorXT& args, MatrixPtsT& pts) const
 {
     switch (i)
     {

@@ -70,7 +70,7 @@ public:
 
     std::tuple<T, VectorXT> minimise(int maxfev);
 
-    VectorXT wts(const VectorXT& args, VectorXT* resid=nullptr);
+    VectorXT wts(const VectorXT& args, VectorXT* resid=nullptr, VectorXT* cnorms=nullptr);
 
     int qdeg() const
     { return qdeg_; }
@@ -348,7 +348,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::minimise(int maxfev) -> std::tuple<T, Vec
 template<typename Derived, typename T, int Ndim, int Norbits>
 inline auto
 BaseDomain<Derived, T, Ndim, Norbits>::wts(
-        const VectorXT& args, VectorXT* resid) -> VectorXT
+        const VectorXT& args, VectorXT* resid, VectorXT* cnorms) -> VectorXT
 {
     const Derived& derived = static_cast<const Derived&>(*this);
 
@@ -372,6 +372,9 @@ BaseDomain<Derived, T, Ndim, Norbits>::wts(
         (*resid).head(b_.size()).noalias() = A_*wts_;
         (*resid)(0) -= f0_;
     }
+
+    if (cnorms)
+        *cnorms = A_.colwise().squaredNorm();
 
     return wts_;
 }
@@ -531,7 +534,18 @@ BaseDomain<Derived, T, Ndim, Norbits>::possible_reductions(
     const T& tol) -> std::vector<VectorOrbArgs>
 {
     Derived& derived = static_cast<Derived&>(*this);
-    const auto wts = derived.wts(args);
+    int tnpts = npts();
+
+    VectorXT cnorms(nwts());
+    const auto wts = derived.wts(args, nullptr, &cnorms);
+
+    for (int i = 0, woff = 0; i < Norbits; ++i)
+        for (int j = 0; j < orbits_(i); ++j, ++woff)
+            cnorms(woff) *= Derived::npts_for_orbit[i]*abs(wts(woff));
+
+    int mcnormix;
+    cnorms.minCoeff(&mcnormix);
+
     std::vector<VectorOrbArgs> reductions;
 
     // Loop over each orbit type
@@ -540,9 +554,9 @@ BaseDomain<Derived, T, Ndim, Norbits>::possible_reductions(
         int nobi = orbits_(i);
         int narg = Derived::narg_for_orbit[i];
 
-        // Check for small weights
-        for (int j = 0; j < nobi; ++j)
-            if (abs(wts(woff++)) < tol)
+        // Check for small weights and unimportant orbits
+        for (int j = 0; j < nobi; ++j, ++woff)
+            if (woff == mcnormix)
                 reductions.push_back(remove_orbit(orbits_, args, i, j));
 
         if (!nobi || !narg)
