@@ -29,7 +29,6 @@
 
 #ifdef POLYQUAD_HAVE_MPI
 # include <boost/mpi.hpp>
-# include <boost/serialization/utility.hpp>
 #endif
 #include <boost/program_options.hpp>
 
@@ -75,6 +74,7 @@ public:
     typedef typename Domain<T>::VectorOrbArgs VectorOrbArgs;
 
     typedef std::tuple<std::pair<int, int>, int, double> Stats;
+    typedef std::pair<std::any, std::list<mpi::request>> Req;
 
     struct DecompRecord
     {
@@ -86,8 +86,8 @@ public:
     enum
     {
         RuleTag,
-        NptsTag,
-        StatsTag
+        StatsTag,
+        QuitTag
     };
 
 public:
@@ -146,10 +146,11 @@ private:
 #ifdef POLYQUAD_HAVE_MPI
     mpi::communicator world_;
 
-    std::list<std::pair<std::any, std::vector<mpi::request>>> reqs_;
+    std::list<Req> reqs_;
 
     int rank_;
     int size_;
+    int nquit_;
     int printed_npts_;
 #endif
 };
@@ -170,6 +171,7 @@ IterateAction<Domain, T>::IterateAction(const po::variables_map& vm)
 #ifdef POLYQUAD_HAVE_MPI
     , rank_(world_.rank())
     , size_(world_.size())
+    , nquit_(1)
     , printed_npts_(vm["ub"].as<int>())
 #endif
 {
@@ -286,28 +288,25 @@ template<template<typename> class Domain, typename T>
 inline void
 IterateAction<Domain, T>::pump_messages()
 {
-    boost::optional<mpi::status> status;
+    // See if any outstanding send requests have finished
+    reqs_.remove_if([](auto& rr)
+    {
+        rr.second.remove_if([](auto& r) { return !!r.test(); });
+        return rr.second.empty();
+    });
 
+    // Check for any pending receive requests
+    boost::optional<mpi::status> status;
     while ((status = world_.iprobe(mpi::any_source))) switch (status->tag())
     {
-        case NptsTag:
-        {
-            int n;
-            world_.recv(mpi::any_source, NptsTag, n);
-
-            if (n < ub_)
-                update_decomps(n);
-
-            break;
-        }
         case StatsTag:
         {
-            std::vector<Stats> stats;
-            world_.recv(mpi::any_source, StatsTag, stats);
+            std::map<std::pair<int, int>, std::pair<int, double>> stats;
+            world_.recv(status->source(), StatsTag, stats);
 
-            for (const auto& s : stats)
+            for (auto const& [ij, v] : stats)
             {
-                auto [ij, ntries, resid] = s;
+                auto [ntries, resid] = v;
 
                 if (auto dr = drecords_.find(ij); dr != std::end(drecords_))
                 {
@@ -320,14 +319,24 @@ IterateAction<Domain, T>::pump_messages()
         case RuleTag:
         {
             std::pair<int, std::string> rule;
-            world_.recv(mpi::any_source, RuleTag, rule);
+            world_.recv(status->source(), RuleTag, rule);
 
-            if (rule.first < printed_npts_)
+            if (rule.first < ub_)
+                update_decomps(rule.first);
+
+            if (rank_ == 0 && rule.first < printed_npts_)
             {
                 std::cout << rule.second << std::flush;
                 printed_npts_ = rule.first;
             }
+            break;
+        }
+        case QuitTag:
+        {
+            int n;
+            world_.recv(status->source(), QuitTag, n);
 
+            ++nquit_;
             break;
         }
     }
@@ -338,21 +347,14 @@ template<typename Object>
 inline void
 IterateAction<Domain, T>::post_message(int tag, const Object& obj)
 {
-    // See if any existing requests have finished
-    reqs_.remove_if([](auto& rr)
-    {
-        return std::all_of(std::begin(rr.second), std::end(rr.second),
-                           [](auto& r) {return r.test() ? true : false; });
-    });
-
     // Create a new block of requests
-    auto& [aobj, mreqs] = reqs_.emplace_back();
-    aobj = obj;
-    mreqs.reserve(size_ - 1);
+    auto& r = reqs_.emplace_back();
+    r.first = obj;
 
     for (int i = 0; i < size_; ++i)
         if (i != rank_)
-            mreqs.push_back(world_.isend(i, tag, std::any_cast<Object>(aobj)));
+            r.second.push_back(world_.isend(i, tag,
+                                            std::any_cast<Object>(r.first)));
 }
 #endif
 
@@ -379,17 +381,14 @@ IterateAction<Domain, T>::attempt_to_minimise(int maxfev, double* rresid)
             auto rstr = rule_to_str(qdeg_, npts, dom_.orbits(), args, outprec_);
 
 #ifdef POLYQUAD_HAVE_MPI
-            // If we are the root rank then print our rule
-            if (rank_ == 0)
+            std::pair<int, std::string> rule {npts, rstr};
+            post_message(RuleTag, rule);
+
+            if (rank_ == 0 && npts < printed_npts_)
             {
                 std::cout << rstr << std::flush;
                 printed_npts_ = npts;
             }
-            // Else send it to the root rank for printing
-            else
-                world_.send(0, RuleTag, make_pair(npts, rstr));
-
-            post_message(NptsTag, npts);
 #else
             std::cout << rstr << std::flush;
 #endif
@@ -453,7 +452,7 @@ IterateAction<Domain, T>::run()
 {
 #ifdef POLYQUAD_HAVE_MPI
     Timer tstats;
-    std::vector<Stats> stats;
+    std::map<std::pair<int, int>, std::pair<int, double>> stats;
 #endif
 
     while (twall_.elapsed() < runtime_)
@@ -476,7 +475,7 @@ IterateAction<Domain, T>::run()
 
         // Try to minimise this decomposition
         int ntries = ntries_;
-        for (int j = 0; j < ntries; )
+        for (int j = 0; j < ntries; ++j)
         {
             double resid;
             dom_.seed();
@@ -500,23 +499,22 @@ IterateAction<Domain, T>::run()
                 r.resid = resid;
             }
             else
-            {
                 ++r.ntries;
-                ++j;
-            }
 
-#ifdef POLYQUAD_HAVE_MPI
-            pump_messages();
-
-            if (active_.first >= ub_)
-                break;
-#endif
         }
 
 #ifdef POLYQUAD_HAVE_MPI
         // Record the statistics for this decomposition
         if (auto dr = drecords_.find(active_); dr != std::end(drecords_))
-            stats.emplace_back(active_, ntries, dr->second.resid);
+        {
+            if (auto ar = stats.find(active_); ar != std::end(stats))
+            {
+                ar->second.first += ntries;
+                ar->second.second = dr->second.resid;
+            }
+            else
+                stats.emplace(active_, std::make_pair(ntries, dr->second.resid));
+        }
 
         // Periodically, inform the other ranks of our stats
         if (tstats.elapsed() > 30)
@@ -529,11 +527,12 @@ IterateAction<Domain, T>::run()
     }
 
 #ifdef POLYQUAD_HAVE_MPI
-    // Cancel any outstanding MPI requests
-    for (auto& [aobj, rr] : reqs_)
-        for (auto& r : rr)
-            r.cancel();
+    post_message(QuitTag, rank_);
+
+    while (nquit_ < size_ || reqs_.size())
+        pump_messages();
 #endif
+
 }
 
 template<template<typename> class Domain, typename T>

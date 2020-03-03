@@ -21,39 +21,14 @@
 
 #include <boost/mpi/datatype.hpp>
 #include <boost/serialization/array.hpp>
-#include <boost/serialization/vector.hpp>
+#include <boost/serialization/map.hpp>
+# include <boost/serialization/utility.hpp>
 
 #include <Eigen/Dense>
 
 #include <string>
-#include <tuple>
 
 namespace boost::serialization {
-
-template<int N>
-struct TupleSerialize
-{
-    template<class Archive, typename... Args>
-    static void serialize(Archive& ar, std::tuple<Args...>& t)
-    {
-        ar & std::get<N - 1>(t);
-        TupleSerialize<N - 1>::serialize(ar, t);
-    }
-};
-
-template<>
-struct TupleSerialize<0>
-{
-    template<class Archive, typename... Args>
-    static void serialize(Archive&, std::tuple<Args...>&) {}
-};
-
-template<class Archive, typename... Args>
-inline void
-serialize(Archive& ar, std::tuple<Args...>& t, unsigned int)
-{
-    TupleSerialize<sizeof...(Args)>::serialize(ar, t);
-}
 
 template<typename Archive, typename Scalar, int Rows, int Cols>
 inline void
@@ -74,20 +49,6 @@ serialize(Archive& ar, Eigen::Matrix<Scalar, Rows, Cols>& m, unsigned int)
         ar & make_array(m.data(), m.size());
     }
 }
-
-}
-
-namespace boost::mpi {
-
-template<typename U>
-struct is_mpi_datatype<std::tuple<U>> : public is_mpi_datatype<U>
-{};
-
-template<typename U, typename... V>
-struct is_mpi_datatype<std::tuple<U, V...>>
-    : public mpl::and_<is_mpi_datatype<U>,
-                       is_mpi_datatype<std::tuple<V...>>>
-{};
 
 }
 
