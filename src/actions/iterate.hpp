@@ -248,14 +248,13 @@ inline void
 IterateAction<Domain, T>::pick_decomp()
 {
     const int sz = drecords_.size();
-    const int n = std::min(5, sz);
 
     auto cmp = [&](const auto& i, const auto& j)
     {
         const DecompRecord& p = drecords_[i];
         const DecompRecord& q = drecords_[j];
 
-        return p.resid*sqrt(p.ntries) < q.resid*sqrt(q.ntries);
+        return std::max(p.resid, 1e-6)*p.ntries < std::max(q.resid, 1e-6)*q.ntries;
     };
 
 #ifdef POLYQUAD_HAVE_MPI
@@ -269,6 +268,10 @@ IterateAction<Domain, T>::pick_decomp()
                 return;
             }
         }
+
+    const int n = std::min(size_, sz);
+#else
+    const int n = std::min(5, sz);
 #endif
 
     // Sort the decompositions
