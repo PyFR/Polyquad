@@ -466,7 +466,7 @@ IterateAction<Domain, T>::run()
 
         // Return if no points remain
         if (!drecords_.size())
-            return;
+            break;
 
         // Pick a decomposition
         pick_decomp();
@@ -492,9 +492,10 @@ IterateAction<Domain, T>::run()
             {
                 if (1.5*resid < r.resid && r.resid < InitResid)
                 {
-                    std::cout << "Rank: "<< rank_ << " ub: " << ub_ << " "
-                              <<  active_.first << " " << active_.second << " "
-                              << r.resid << " " << resid << std::endl;
+                    if (verbose_)
+                        std::cout << "Rank: "<< rank_ << " ub: " << ub_ << " "
+                                  <<  active_.first << " " << active_.second << " "
+                                  << r.resid << " " << resid << std::endl;
 
                     ntries += 3;
                 }
@@ -503,7 +504,6 @@ IterateAction<Domain, T>::run()
             }
             else
                 ++r.ntries;
-
         }
 
 #ifdef POLYQUAD_HAVE_MPI
