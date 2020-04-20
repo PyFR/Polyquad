@@ -74,7 +74,10 @@ public:
     typedef typename Domain<T>::VectorOrbArgs VectorOrbArgs;
 
     typedef std::tuple<std::pair<int, int>, int, double> Stats;
+
+#ifdef POLYQUAD_HAVE_MPI
     typedef std::pair<std::any, std::list<mpi::request>> Req;
+#endif
 
     struct DecompRecord
     {
@@ -492,10 +495,12 @@ IterateAction<Domain, T>::run()
             {
                 if (1.5*resid < r.resid && r.resid < InitResid)
                 {
+#ifdef POLYQUAD_HAVE_MPI
                     if (verbose_)
                         std::cout << "Rank: "<< rank_ << " ub: " << ub_ << " "
                                   <<  active_.first << " " << active_.second << " "
                                   << r.resid << " " << resid << std::endl;
+#endif
 
                     ntries += 3;
                 }
