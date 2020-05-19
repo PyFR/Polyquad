@@ -214,6 +214,10 @@ IterateAction<Domain, T>::update_decomps(int ub)
             ++it;
     }
 
+    std::vector<VectorOrb> vorbs;
+    for (const auto& kv : drecords_)
+        vorbs.push_back(kv.second.orbit);
+
     // Determine which point counts yield valid decompositions
     for (int i = ub_ - 1; i > lb_; --i)
     {
@@ -228,15 +232,18 @@ IterateAction<Domain, T>::update_decomps(int ub)
                 continue;
 
             bool insert = true;
-            for (const auto& kv : drecords_)
-                if (((kv.second.orbit - orbs[j]).array() >= 0).all())
+            for (const auto& orb : vorbs)
+                if (((orb - orbs[j]).array() >= 0).all())
                 {
                     insert = false;
                     break;
                 }
 
             if (insert)
+            {
                 drecords_[{i, j}] = {orbs[j], 0, InitResid};
+                vorbs.push_back(orbs[j]);
+            }
         }
     }
 
@@ -294,6 +301,8 @@ template<template<typename> class Domain, typename T>
 inline void
 IterateAction<Domain, T>::pump_messages()
 {
+    typedef std::map<std::pair<int, int>, std::pair<int, double>> stats_map;
+
     // See if any outstanding send requests have finished
     reqs_.remove_if([](auto& rr)
     {
@@ -307,10 +316,13 @@ IterateAction<Domain, T>::pump_messages()
     {
         case StatsTag:
         {
-            std::map<std::pair<int, int>, std::pair<int, double>> stats;
+            std::pair<int, stats_map> stats;
             world_.recv(status->source(), StatsTag, stats);
 
-            for (auto const& [ij, v] : stats)
+            if (stats.first < ub_)
+                update_decomps(stats.first);
+
+            for (auto const& [ij, v] : stats.second)
             {
                 auto [ntries, resid] = v;
 
@@ -527,7 +539,7 @@ IterateAction<Domain, T>::run()
         // Periodically, inform the other ranks of our stats
         if (tstats.elapsed() > 30)
         {
-            post_message(StatsTag, stats);
+            post_message(StatsTag, std::make_pair(ub_, stats));
             stats.clear();
             tstats.reset();
         }
