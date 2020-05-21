@@ -509,7 +509,7 @@ IterateAction<Domain, T>::run()
                 {
 #ifdef POLYQUAD_HAVE_MPI
                     if (verbose_)
-                        std::cout << "Rank: "<< rank_ << " ub: " << ub_ << " "
+                        std::cerr << "Rank: "<< rank_ << " ub: " << ub_ << " "
                                   <<  active_.first << " " << active_.second << " "
                                   << r.resid << " " << resid << std::endl;
 #endif
