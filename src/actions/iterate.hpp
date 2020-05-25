@@ -112,6 +112,8 @@ private:
 #ifdef POLYQUAD_HAVE_MPI
     void pump_messages();
 
+    void prod_messages();
+
     template<typename Object>
     void post_message(int tag, const Object& obj);
 #endif
@@ -245,6 +247,10 @@ IterateAction<Domain, T>::update_decomps(int ub)
                 vorbs.push_back(orbs[j]);
             }
         }
+
+#ifdef POLYQUAD_HAVE_MPI
+        prod_messages();
+#endif
     }
 
     // Update the decomposition list
@@ -304,11 +310,7 @@ IterateAction<Domain, T>::pump_messages()
     typedef std::map<std::pair<int, int>, std::pair<int, double>> stats_map;
 
     // See if any outstanding send requests have finished
-    reqs_.remove_if([](auto& rr)
-    {
-        rr.second.remove_if([](auto& r) { return !!r.test(); });
-        return rr.second.empty();
-    });
+    prod_messages();
 
     // Check for any pending receive requests
     boost::optional<mpi::status> status;
@@ -358,6 +360,17 @@ IterateAction<Domain, T>::pump_messages()
             break;
         }
     }
+}
+
+template<template<typename> class Domain, typename T>
+inline void
+IterateAction<Domain, T>::prod_messages()
+{
+    reqs_.remove_if([](auto& rr)
+    {
+        rr.second.remove_if([](auto& r) { return !!r.test(); });
+        return rr.second.empty();
+    });
 }
 
 template<template<typename> class Domain, typename T>
@@ -461,6 +474,10 @@ IterateAction<Domain, T>::attempt_to_reduce(const VectorXT& args)
         // If we've seen too many reductions then return
         if (seen_red_.size() > 2500)
             return;
+
+#ifdef POLYQUAD_HAVE_MPI
+        prod_messages();
+#endif
     }
 }
 
