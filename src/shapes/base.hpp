@@ -339,10 +339,20 @@ BaseDomain<Derived, T, Ndim, Norbits>::minimise(int maxfev) -> std::tuple<T, Vec
 
     // Compute the residual of these clamped points
     VectorXT resid(derived.nbfn());
-    derived.wts(args_, &resid);
+    auto rwts = derived.wts(args_, &resid);
+
+    // Compute the residual norm
+    T rnorm = resid.norm();
+
+    // If requested, penalize negative weights
+    if (poswts_)
+    {
+        T pen = (rwts.array() < 0).select(rwts, 0).sum();
+        rnorm = sqrt(rnorm*rnorm + pen*pen);
+    }
 
     // Return
-    return std::make_tuple(resid.norm(), args_);
+    return std::make_tuple(rnorm, args_);
 }
 
 template<typename Derived, typename T, int Ndim, int Norbits>
