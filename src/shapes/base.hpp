@@ -106,7 +106,10 @@ protected:
     { return arg_offset(orbits_, i, j); }
 
 public:
-    static std::vector<VectorOrb> symm_decomps(int npts);
+    static std::vector<VectorOrb> symm_decomps(int npts)
+    { return symm_decomps(npts, VectorOrb::Constant(npts)); }
+
+    static std::vector<VectorOrb> symm_decomps(int npts, const VectorOrb& limits);
 
 private:
     static constexpr int npts(const VectorOrb& orb)
@@ -131,6 +134,7 @@ private:
     static void sort_args(const VectorOrb& orb, VectorXT& args);
 
     static void symm_decomps_recurse(VectorOrb coeffs,
+                                     const VectorOrb& limits,
                                      int sum,
                                      VectorOrb& partsoln,
                                      std::vector<VectorOrb>& solns);
@@ -177,14 +181,16 @@ BaseDomain<Derived, T, Ndim, Norbits>::configure(
 
 template<typename Derived, typename T, int Ndim, int Norbits>
 inline auto
-BaseDomain<Derived, T, Ndim, Norbits>::symm_decomps(int npts) -> std::vector<VectorOrb>
+BaseDomain<Derived, T, Ndim, Norbits>::symm_decomps(
+    int npts,
+    const VectorOrb& limits) -> std::vector<VectorOrb>
 {
     VectorOrb coeffs(Derived::npts_for_orbit);
 
     std::vector<VectorOrb> solns;
     VectorOrb partsoln = VectorOrb::Zero();
 
-    symm_decomps_recurse(coeffs, npts, partsoln, solns);
+    symm_decomps_recurse(coeffs, limits, npts, partsoln, solns);
 
     return solns;
 }
@@ -464,13 +470,14 @@ template<typename Derived, typename T, int Ndim, int Norbits>
 inline void
 BaseDomain<Derived, T, Ndim, Norbits>::symm_decomps_recurse(
         VectorOrb coeffs,
+        const VectorOrb& limits,
         int sum,
         VectorOrb& partsoln,
         std::vector<VectorOrb>& solns)
 {
     int index;
     int mcoeff = coeffs.maxCoeff(&index);
-    int range = sum / mcoeff;
+    int range = std::min(sum / mcoeff, limits(index));
 
     if (range*mcoeff == sum)
     {
@@ -496,7 +503,7 @@ BaseDomain<Derived, T, Ndim, Norbits>::symm_decomps_recurse(
             if (coeffCopy(i) != 0)
                 partsoln(i) = 0;
 
-        symm_decomps_recurse(coeffCopy, rem, partsoln, solns);
+        symm_decomps_recurse(coeffCopy, limits, rem, partsoln, solns);
     }
 }
 

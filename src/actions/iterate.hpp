@@ -223,13 +223,10 @@ IterateAction<Domain, T>::update_decomps(int ub)
     // Determine which point counts yield valid decompositions
     for (int i = ub_ - 1; i > lb_; --i)
     {
-        const std::vector<VectorOrb> orbs = dom_.symm_decomps(i);
+        const std::vector<VectorOrb> orbs = dom_.symm_decomps(i, limits_);
 
         for (int j = 0; j < orbs.size(); ++j)
         {
-            if (((limits_ - orbs[j]).array() < 0).any())
-                continue;
-
             if (drecords_.count({i, j}))
                 continue;
 
