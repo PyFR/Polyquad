@@ -1,6 +1,6 @@
 /*
     This file is part of polyquad.
-    Copyright (C) 2014  Freddie Witherden <freddie@witherden.org>
+    Copyright (C) 2025  Freddie Witherden <freddie@witherden.org>
 
     Polyquad is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -31,8 +31,10 @@
 #include "utils/io.hpp"
 
 #include <boost/algorithm/string/join.hpp>
+#ifdef POLYQUAD_HAVE_MULTIPRECISION
 #include <boost/multiprecision/cpp_bin_float.hpp>
 #include <boost/multiprecision/eigen.hpp>
+#endif
 #include <boost/program_options.hpp>
 #include <Eigen/Dense>
 
@@ -42,7 +44,6 @@
 #include <string>
 #include <vector>
 
-namespace mp = boost::multiprecision;
 namespace po = boost::program_options;
 using namespace polyquad;
 
@@ -63,7 +64,9 @@ void process_dispatch(const po::variables_map& vm)
 
 int main(int argc, const char *argv[])
 {
-    typedef mp::cpp_bin_float_100 bfloat;
+#ifdef POLYQUAD_HAVE_MULTIPRECISION
+    typedef boost::multiprecision::cpp_bin_float_100 bfloat;
+#endif
     typedef std::pair<std::string, std::string> shape_key;
     typedef void (*process_fn)(const po::variables_map&);
 
@@ -75,12 +78,14 @@ int main(int argc, const char *argv[])
         { {"tet",  "double"}, &process_dispatch<TetDomain,  double> },
         { {"pri",  "double"}, &process_dispatch<PriDomain,  double> },
         { {"pyr",  "double"}, &process_dispatch<PyrDomain,  double> },
+#ifdef POLYQUAD_HAVE_MULTIPRECISION
         { {"tri",  "bfloat"}, &process_dispatch<TriDomain,  bfloat> },
         { {"quad", "bfloat"}, &process_dispatch<QuadDomain, bfloat> },
         { {"hex",  "bfloat"}, &process_dispatch<HexDomain,  bfloat> },
         { {"tet",  "bfloat"}, &process_dispatch<TetDomain,  bfloat> },
         { {"pri",  "bfloat"}, &process_dispatch<PriDomain,  bfloat> },
         { {"pyr",  "bfloat"}, &process_dispatch<PyrDomain,  bfloat> },
+#endif
     };
 
     std::set<std::string> shapes, dtypes;

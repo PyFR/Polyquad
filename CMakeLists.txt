@@ -1,17 +1,31 @@
 ##################################################
 # Main build file for Polyquad
 ##################################################
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
-INCLUDE(CheckIncludeFiles)
+cmake_minimum_required(VERSION 3.15)
 
-PROJECT(polyquad)
+project(polyquad VERSION 1.1.0 DESCRIPTION "Polyquad" LANGUAGES CXX)
+
+include(CheckIncludeFiles)
+include(GNUInstallDirs)
 
 # Add our custom CMake module dir
-SET(CMAKE_MODULE_PATH ${polyquad_SOURCE_DIR}/cmake)
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
-SET(POLYQUAD_VERSION_MAJOR 1)
-SET(POLYQUAD_VERSION_MINOR 1)
-SET(POLYQUAD_VERSION "${POLYQUAD_VERSION_MAJOR}.${POLYQUAD_VERSION_MINOR}")
+##################################################
+# Default build settings
+##################################################
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Build type" FORCE)
+endif()
+
+# C++17 and warnings
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+if(UNIX)
+    add_compile_options(-Wno-deprecated)
+endif()
 
 ##################################################
 # Source files
@@ -37,87 +51,64 @@ SET(POLYQUAD_HEADERS
 ##################################################
 # Executable
 ##################################################
-ADD_EXECUTABLE(polyquad src/main.cpp ${POLYQUAD_HEADERS})
+add_executable(polyquad src/main.cpp ${POLYQUAD_HEADERS})
 
 ##################################################
 # Internal includes, these must come before the
 # located dependencies!
 ##################################################
-INCLUDE_DIRECTORIES(src)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(polyquad
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_BINARY_DIR}
+)
 
 ##################################################
 # External dependencies
 ##################################################
-SET(POLYQUAD_BOOST_LIBS
-    program_options
-    serialization)
+find_package(Eigen3 3.4 REQUIRED CONFIG)
+target_link_libraries(polyquad PRIVATE Eigen3::Eigen)
+get_target_property(EIGEN3_INCLUDE Eigen3::Eigen INTERFACE_INCLUDE_DIRECTORIES)
+target_include_directories(polyquad PRIVATE ${EIGEN3_INCLUDE}/unsupported)
 
-# Find Boost
-FIND_PACKAGE(Boost REQUIRED ${POLYQUAD_BOOST_LIBS})
-LINK_DIRECTORIES(${Boost_LIBRARY_DIRS})
-INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIRS})
-TARGET_LINK_LIBRARIES(polyquad ${Boost_LIBRARIES})
-
-# Find Eigen 3
-FIND_PACKAGE(Eigen3 REQUIRED)
-INCLUDE_DIRECTORIES(${EIGEN3_INCLUDE_DIR} ${EIGEN3_INCLUDE_DIR}/unsupported)
+set(POLYQUAD_BOOST_LIBS program_options serialization)
+find_package(Boost 1.74 REQUIRED CONFIG COMPONENTS ${POLYQUAD_BOOST_LIBS})
+target_link_libraries(polyquad PRIVATE Boost::program_options Boost::serialization)
 
 ##################################################
 # MPI
 ##################################################
-FIND_PACKAGE(MPI)
-IF(MPI_CXX_FOUND)
-    FIND_PACKAGE(Boost COMPONENTS mpi)
-    IF(Boost_MPI_FOUND)
-        SET(CMAKE_CXX_COMPILE_FLAGS
-            ${CMAKE_CXX_COMPILE_FLAGS}
-            ${MPI_COMPILE_FLAGS})
-        SET(CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS} ${MPI_LINK_FLAGS})
-        INCLUDE_DIRECTORIES(${MPI_INCLUDE_PATH})
-        TARGET_LINK_LIBRARIES(polyquad
-                              ${Boost_MPI_LIBRARY}
-                              ${MPI_CXX_LIBRARIES})
-        SET(POLYQUAD_HAVE_MPI 1)
-    ENDIF()
-ENDIF()
+find_package(MPI)
+if(TARGET MPI::MPI_CXX)
+    find_package(Boost 1.74 CONFIG COMPONENTS mpi)
+    if(TARGET Boost::mpi)
+        target_link_libraries(polyquad PRIVATE Boost::mpi MPI::MPI_CXX)
+        set(POLYQUAD_HAVE_MPI 1)
+    endif()
+endif()
 
-# Avoid ';' in the link flags
-STRING(REPLACE ";" " " CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS}")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    option(POLYQUAD_USE_MULTIPRECISION "Enable multi-precision arithmetic support" OFF)
+else()
+    option(POLYQUAD_USE_MULTIPRECISION "Enable multi-precision arithmetic support" ON)
+endif()
 
-##################################################
-# C++17
-##################################################
-IF(UNIX)
-    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wno-deprecated")
-ENDIF()
+if(POLYQUAD_USE_MULTIPRECISION)
+    set(POLYQUAD_HAVE_MULTIPRECISION 1)
+endif()
 
 ##################################################
-# Build type
+# Build type and optimisation
 ##################################################
-IF(NOT CMAKE_BUILD_TYPE)
-  SET(CMAKE_BUILD_TYPE RelWithDebInfo)
-ENDIF()
-
-##################################################
-# Optimisation
-##################################################
-
-# Auto-optimise for CPU arch for non-debug builds
-IF(NOT CMAKE_BUILD_TYPE MATCHES Debug)
-  ADD_DEFINITIONS("-O3 -march=native")
-ENDIF()
-
-# For release builds remove all debugging info
-IF(CMAKE_BUILD_TYPE MATCHES Release)
-  ADD_DEFINITIONS("-DNDEBUG")
-ENDIF()
+if(NOT CMAKE_BUILD_TYPE MATCHES Debug)
+    target_compile_options(polyquad PRIVATE -O3 -march=native)
+endif()
 
 ##################################################
 # Date & compiler info
 ##################################################
-INCLUDE(Today)
-TODAY(POLYQUAD_BUILD_DATE)
+include(Today)
+today(POLYQUAD_BUILD_DATE)
 
 #INCLUDE(GetGitRevisionDescription)
 #GET_GIT_HEAD_REVISION(GIT_REFSPEC POLYQUAD_GIT_SHA1)
@@ -125,5 +116,5 @@ TODAY(POLYQUAD_BUILD_DATE)
 ##################################################
 # Config.h
 ##################################################
-CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake
                ${CMAKE_CURRENT_BINARY_DIR}/config.h)
