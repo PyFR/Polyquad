@@ -173,7 +173,12 @@ int main(int argc, const char *argv[])
         if (vm.count("version"))
         {
             std::cout << "polyquad " POLYQUAD_VERSION
-                      << " built on " POLYQUAD_BUILD_DATE "\n";
+                         " built on " POLYQUAD_BUILD_DATE "\n";
+#ifdef POLYQUAD_HAVE_MPI
+            std::cout << "MPI support: ENABLED\n";
+#else
+            std::cout << "MPI support: DISABLED\n";
+#endif
             return 0;
         }
 
