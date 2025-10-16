@@ -282,13 +282,13 @@ TetDomain<T>::collapse_arg(int i, int aoff, const VectorXT& args,
         const T a = args(aoff + 0), b = args(aoff + 1), c = args(aoff + 2);
         const T d = 1 - a - b - c;
 
-        if (abs(c - fourth) < tol)
+        if (abs(d - fourth) < tol)
             replace(0);
         else if (abs(a - c) < tol)
             replace(1, a);
         else if (abs(b - d) < tol)
             replace(1, b);
-        else if (abs(a - b) < tol &&  abs(c - d) < tol)
+        else if (abs(a - b) < tol && abs(c - d) < tol)
             replace(2, a);
         else if (abs(a - b) < tol)
             replace(3, a, c);

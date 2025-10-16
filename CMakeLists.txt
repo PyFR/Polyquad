@@ -2,6 +2,7 @@
 # Main build file for Polyquad
 ##################################################
 cmake_minimum_required(VERSION 3.15)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 project(polyquad VERSION 1.1.0 DESCRIPTION "Polyquad" LANGUAGES CXX)
 
